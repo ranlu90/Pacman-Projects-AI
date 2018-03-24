@@ -162,7 +162,43 @@ class MinimaxAgent(MultiAgentSearchAgent):
             Returns the total number of agents in the game
         """
         "*** YOUR CODE HERE ***"
+        # Go through the tree and get the utility of terminal state for Pacman
+        def getMaxUtility(gameState, depth):
+            utility = float('-inf')
+            # If the search has reached any leaves or game ends return the utility
+            if gameState.isWin() or gameState.isLose() or depth == self.depth:
+                return self.evaluationFunction(gameState)
+            # Get legal actions of Pacman at index 0 and successor states
+            # Use recursive getMaxUtility function with new agent ghost at index 1
+            # Get the maximum utility of successor state
+            for action in gameState.getLegalActions(0):
+                utility = max(utility, getMinUtility(gameState.generateSuccessor(0, action), 1, depth))
+            return utility
+
+        # Go through the tree and get the utility of terminal state for all ghost agents
+        def getMinUtility(gameState, agentIndex, depth):
+            utility = float('inf')
+            if gameState.isWin() or gameState.isLose() or depth == self.depth:
+                return self.evaluationFunction(gameState)
+            # if the ghost is the last one in all ghosts, go through successor states to get minimum utility
+            if agentIndex == gameState.getNumAgents() - 1:
+                # Get legal actions of ghost at agentIndex and successor states
+                # Use recursive getMaxUtility function of Pacman with depth + 1
+                # Get the minimum utility of successor state
+                for action in gameState.getLegalActions(agentIndex):
+                    utility = min(utility, getMaxUtility(gameState.generateSuccessor(agentIndex, action), depth +1))
+            # If the ghost isn't the last ghost, loop through getMinUtility function
+            # and get minimum utility of all ghosts
+            else:
+                for action in gameState.getLegalActions(agentIndex):
+                    utility = min(utility, getMinUtility(gameState.generateSuccessor(agentIndex, action),
+                                                       agentIndex + 1, depth))
+            return utility
+
+
+
         util.raiseNotDefined()
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
