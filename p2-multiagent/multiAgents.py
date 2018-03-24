@@ -168,7 +168,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
             # If the search has reached any leaves or game ends return the utility
             if gameState.isWin() or gameState.isLose() or depth == self.depth:
                 return self.evaluationFunction(gameState)
-            # Get legal actions of Pacman at index 0 and successor states
             # Use recursive getMaxUtility function with new agent ghost at index 1
             # Get the maximum utility of successor state
             for action in gameState.getLegalActions(0):
@@ -182,11 +181,10 @@ class MinimaxAgent(MultiAgentSearchAgent):
                 return self.evaluationFunction(gameState)
             # if the ghost is the last one in all ghosts, go through successor states to get minimum utility
             if agentIndex == gameState.getNumAgents() - 1:
-                # Get legal actions of ghost at agentIndex and successor states
                 # Use recursive getMaxUtility function of Pacman with depth + 1
                 # Get the minimum utility of successor state
                 for action in gameState.getLegalActions(agentIndex):
-                    utility = min(utility, getMaxUtility(gameState.generateSuccessor(agentIndex, action), depth +1))
+                    utility = min(utility, getMaxUtility(gameState.generateSuccessor(agentIndex, action), depth + 1))
             # If the ghost isn't the last ghost, loop through getMinUtility function
             # and get minimum utility of all ghosts
             else:
@@ -195,8 +193,19 @@ class MinimaxAgent(MultiAgentSearchAgent):
                                                        agentIndex + 1, depth))
             return utility
 
+        # The initial move before receiving any successor utilities
+        initialMove = Directions.STOP
+        maxValue = float('-inf')
 
+        # Get the maximum value from all Min players
+        for action in gameState.getLegalActions(0):
+            # Get the minimum utility received from ghosts at index 1
+            value = getMinUtility(gameState.generateSuccessor(0, action), 1, 0)
+            if value > maxValue:
+                maxValue = value
+                initialMove = action
 
+        return initialMove
         util.raiseNotDefined()
 
 
