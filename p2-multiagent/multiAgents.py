@@ -18,6 +18,7 @@ import random, util
 
 from game import Agent
 
+
 class ReflexAgent(Agent):
     """
       A reflex agent chooses an action at each choice point by examining
@@ -27,7 +28,6 @@ class ReflexAgent(Agent):
       it in any way you see fit, so long as you don't touch our method
       headers.
     """
-
 
     def getAction(self, gameState):
         """
@@ -45,7 +45,7 @@ class ReflexAgent(Agent):
         scores = [self.evaluationFunction(gameState, action) for action in legalMoves]
         bestScore = max(scores)
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
-        chosenIndex = random.choice(bestIndices) # Pick randomly among the best
+        chosenIndex = random.choice(bestIndices)  # Pick randomly among the best
 
         "Add more of your code here if you want to"
 
@@ -72,7 +72,7 @@ class ReflexAgent(Agent):
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
-        "*** YOUR CODE HERE ***"
+
         expectedValue = 0
         foodList = currentGameState.getFood()
         # If the successor position after one Pacman move is in the food list, increments the value by 100
@@ -86,11 +86,11 @@ class ReflexAgent(Agent):
         # Search all foods in the successor state to find the minimum distance
         for foodPosition in newFood.asList():
             foodDistance = manhattanDistance(newPos, foodPosition)
-            minFoodDistance = min(minFoodDistance,foodDistance)
+            minFoodDistance = min(minFoodDistance, foodDistance)
 
         # Search all ghosts to find the minimum ghost distance
         for ghostPosition in successorGameState.getGhostPositions():
-            ghostDistance = manhattanDistance(newPos,ghostPosition)
+            ghostDistance = manhattanDistance(newPos, ghostPosition)
             minGhostDistance = min(minGhostDistance, ghostDistance)
 
         # The game ends if Pacman gets hit by ghosts, hence decreases the value
@@ -105,9 +105,9 @@ class ReflexAgent(Agent):
 
         # Use the score if Pacman will eat a food, the reciprocal of distance to food and
         # minGhostDistance divided total length as overall value
-        expectedValue = expectedValue + 1.0/minFoodDistance + minGhostDistance/length
+        expectedValue = expectedValue + 1.0 / minFoodDistance + minGhostDistance / length
         return expectedValue
-        # return successorGameState.getScore()
+
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -118,6 +118,7 @@ def scoreEvaluationFunction(currentGameState):
       (not reflex agents).
     """
     return currentGameState.getScore()
+
 
 class MultiAgentSearchAgent(Agent):
     """
@@ -134,10 +135,42 @@ class MultiAgentSearchAgent(Agent):
       is another abstract class.
     """
 
-    def __init__(self, evalFn = 'scoreEvaluationFunction', depth = '2'):
-        self.index = 0 # Pacman is always agent index 0
+    def __init__(self, evalFn='scoreEvaluationFunction', depth='2'):
+        self.index = 0  # Pacman is always agent index 0
         self.evaluationFunction = util.lookup(evalFn, globals())
         self.depth = int(depth)
+
+    # Go through the tree and get the utility of terminal state for Pacman
+    def getMaxUtility(self, gameState, depth):
+        utility = float('-inf')
+        # If the search has reached any leaves or game ends return the utility
+        if gameState.isWin() or gameState.isLose() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+        # Use recursive getMaxUtility function with new agent ghost at index 1
+        # Get the maximum utility of successor state
+        for action in gameState.getLegalActions(0):
+            utility = max(utility, self.getMinUtility(gameState.generateSuccessor(0, action), 1, depth))
+        return utility
+
+    # Go through the tree and get the utility of terminal state for all ghost agents
+    def getMinUtility(self, gameState, agentIndex, depth):
+        utility = float('inf')
+        if gameState.isWin() or gameState.isLose() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+        # if the ghost is the last one in all ghosts, go through successor states to get minimum utility
+        if agentIndex == gameState.getNumAgents() - 1:
+            # Use recursive getMaxUtility function of Pacman with depth + 1
+            # Get the minimum utility of successor state
+            for action in gameState.getLegalActions(agentIndex):
+                utility = min(utility, self.getMaxUtility(gameState.generateSuccessor(agentIndex, action), depth + 1))
+        # If the ghost isn't the last ghost, loop through getMinUtility function
+        # and get minimum utility of all ghosts
+        else:
+            for action in gameState.getLegalActions(agentIndex):
+                utility = min(utility, self.getMinUtility(gameState.generateSuccessor(agentIndex, action),
+                                                     agentIndex + 1, depth))
+        return utility
+
 
 class MinimaxAgent(MultiAgentSearchAgent):
     """
@@ -161,37 +194,6 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
-        "*** YOUR CODE HERE ***"
-        # Go through the tree and get the utility of terminal state for Pacman
-        def getMaxUtility(gameState, depth):
-            utility = float('-inf')
-            # If the search has reached any leaves or game ends return the utility
-            if gameState.isWin() or gameState.isLose() or depth == self.depth:
-                return self.evaluationFunction(gameState)
-            # Use recursive getMaxUtility function with new agent ghost at index 1
-            # Get the maximum utility of successor state
-            for action in gameState.getLegalActions(0):
-                utility = max(utility, getMinUtility(gameState.generateSuccessor(0, action), 1, depth))
-            return utility
-
-        # Go through the tree and get the utility of terminal state for all ghost agents
-        def getMinUtility(gameState, agentIndex, depth):
-            utility = float('inf')
-            if gameState.isWin() or gameState.isLose() or depth == self.depth:
-                return self.evaluationFunction(gameState)
-            # if the ghost is the last one in all ghosts, go through successor states to get minimum utility
-            if agentIndex == gameState.getNumAgents() - 1:
-                # Use recursive getMaxUtility function of Pacman with depth + 1
-                # Get the minimum utility of successor state
-                for action in gameState.getLegalActions(agentIndex):
-                    utility = min(utility, getMaxUtility(gameState.generateSuccessor(agentIndex, action), depth + 1))
-            # If the ghost isn't the last ghost, loop through getMinUtility function
-            # and get minimum utility of all ghosts
-            else:
-                for action in gameState.getLegalActions(agentIndex):
-                    utility = min(utility, getMinUtility(gameState.generateSuccessor(agentIndex, action),
-                                                       agentIndex + 1, depth))
-            return utility
 
         # The initial move before receiving any successor utilities
         initialMove = Directions.STOP
@@ -200,13 +202,12 @@ class MinimaxAgent(MultiAgentSearchAgent):
         # Get the maximum value from all Min players
         for action in gameState.getLegalActions(0):
             # Get the minimum utility received from ghosts at index 1
-            value = getMinUtility(gameState.generateSuccessor(0, action), 1, 0)
+            value = self.getMinUtility(gameState.generateSuccessor(0, action), 1, 0)
             if value > maxValue:
                 maxValue = value
                 initialMove = action
 
         return initialMove
-        util.raiseNotDefined()
 
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
@@ -221,6 +222,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
 
+
 class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
@@ -233,8 +235,10 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           All ghosts should be modeled as choosing uniformly at random from their
           legal moves.
         """
+
         "*** YOUR CODE HERE ***"
         util.raiseNotDefined()
+
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -246,6 +250,6 @@ def betterEvaluationFunction(currentGameState):
     "*** YOUR CODE HERE ***"
     util.raiseNotDefined()
 
+
 # Abbreviation
 better = betterEvaluationFunction
-
