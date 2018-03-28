@@ -214,12 +214,73 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
     """
       Your minimax agent with alpha-beta pruning (question 3)
     """
+    # Get the maximum utility of Pacman
+    def GetMaxUtility(self, gameState, depth, alpha, beta):
+
+        if gameState.isLose() or gameState.isWin() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+
+        # The default utility is negative infinite
+        utility = float('-inf')
+
+        for action in gameState.getLegalActions(0):
+            utility = max(utility, self.GetMinUtility(gameState.generateSuccessor(0, action), 1, depth, alpha, beta))
+            # Cut off the branch if it's already greater than beta
+            if utility > beta:
+                return utility
+            alpha = max(alpha, utility)
+        return utility
+
+    # Get the minimum utility of all ghosts
+    def GetMinUtility(self, gameState, agentIndex, depth, alpha, beta):
+
+        if gameState.isLose() or gameState.isWin() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+
+        # The default utility is positive infinite
+        utility = float('inf')
+
+        # If the agent is the last one in all ghosts
+        if agentIndex == gameState.getNumAgents() - 1:
+            for action in gameState.getLegalActions(agentIndex):
+                utility = min(utility, self.GetMaxUtility(gameState.generateSuccessor(agentIndex, action),
+                                                          depth + 1, alpha, beta))
+                # Cut off the branch if it's already smaller than alpha
+                if utility < alpha:
+                    return utility
+                beta = min(beta, utility)
+
+        # The agent isn't the last one in all ghosts, loop through GetMinUtility to get minimum utility of all ghosts
+        else:
+            for action in gameState.getLegalActions(agentIndex):
+                utility = min(utility, self.GetMinUtility(gameState.generateSuccessor(agentIndex, action), agentIndex + 1,
+                                                    depth, alpha, beta))
+                if utility < alpha:
+                    return utility
+                beta = min(beta, utility)
+        return utility
 
     def getAction(self, gameState):
         """
           Returns the minimax action using self.depth and self.evaluationFunction
         """
         "*** YOUR CODE HERE ***"
+
+        initialMove = Directions.STOP
+
+        maxValue = float('-inf')
+        alpha = float('-inf')
+        beta = float('inf')
+
+        for action in gameState.getLegalActions(0):
+            value = self.GetMinUtility(gameState.generateSuccessor(0, action), 1, 0, alpha, beta)
+            if value > maxValue:
+                maxValue = value
+                initialMove = action
+            # Track alpha after expanding the fist min player and used for the comparision with others on the same level
+            alpha = max(alpha, maxValue)
+
+        return initialMove
         util.raiseNotDefined()
 
 
