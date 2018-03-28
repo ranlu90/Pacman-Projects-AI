@@ -288,6 +288,44 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
     """
       Your expectimax agent (question 4)
     """
+    # Go through the tree and get the utility of terminal state for Pacman
+    def getMaxUtility(self, gameState, depth):
+        utility = float('-inf')
+        # If the search has reached any leaves or game ends return the utility
+        if gameState.isWin() or gameState.isLose() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+        # Use recursive getMaxUtility function with new agent ghost at index 1
+        # Get the maximum utility of successor state
+        for action in gameState.getLegalActions(0):
+            utility = max(utility, self.getExpectiUtility(gameState.generateSuccessor(0, action), 1, depth))
+        return utility
+
+    # Go through the tree and get the utility of terminal state for all ghost agents
+    def getExpectiUtility(self, gameState, agentIndex, depth):
+        utility = float('inf')
+        if gameState.isWin() or gameState.isLose() or depth == self.depth:
+            return self.evaluationFunction(gameState)
+        # if the ghost is the last one in all ghosts, go through successor states to get minimum utility
+        if agentIndex == gameState.getNumAgents() - 1:
+            # Use recursive getMaxUtility function of Pacman with depth + 1
+            # Get the minimum utility of successor state
+            combinedUtility = 0.0
+            for action in gameState.getLegalActions(agentIndex):
+            
+                combinedUtility += self.getMaxUtility(gameState.generateSuccessor(agentIndex, action), depth + 1)
+            utility = combinedUtility / len(gameState.getLegalActions(agentIndex))
+        # If the ghost isn't the last ghost, loop through getMinUtility function
+        # and get minimum utility of all ghosts
+        else:
+            combinedUtility = 0.0
+
+            for action in gameState.getLegalActions(agentIndex):
+                combinedUtility +=  self.getExpectiUtility(gameState.generateSuccessor(agentIndex, action),
+                                                     agentIndex + 1, depth)
+            utility = combinedUtility / len(gameState.getLegalActions(agentIndex))
+
+        return utility
+
 
     def getAction(self, gameState):
         """
@@ -298,7 +336,21 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
 
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+ 
+        # The initial move before receiving any successor utilities
+        initialMove = Directions.STOP
+        maxValue = float('-inf')
+
+        # Get the maximum value from all Min players
+        for action in gameState.getLegalActions(0):
+            # Get the minimum utility received from ghosts at index 1
+            value = self.getExpectiUtility(gameState.generateSuccessor(0, action), 1, 0)
+            if value > maxValue:
+                maxValue = value
+                initialMove = action
+
+        return initialMove
+
 
 
 def betterEvaluationFunction(currentGameState):
