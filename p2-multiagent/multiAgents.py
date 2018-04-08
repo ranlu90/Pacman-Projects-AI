@@ -301,7 +301,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
     # Go through the tree and get the utility of terminal state for all ghost agents
     def getExpectiUtility(self, gameState, agentIndex, depth):
-        utility = float('inf')
+
         if gameState.isWin() or gameState.isLose() or depth == self.depth:
             return self.evaluationFunction(gameState)
         # if the ghost is the last one in all ghosts, go through successor states to get minimum utility
@@ -312,11 +312,10 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             for action in gameState.getLegalActions(agentIndex):
                 combinedUtility += float(self.getMaxUtility(gameState.generateSuccessor(agentIndex, action), depth + 1))
             utility = combinedUtility / len(gameState.getLegalActions(agentIndex))
-        # If the ghost isn't the last ghost, loop through getMinUtility function
-        # and get minimum utility of all ghosts
+        # If the ghost isn't the last ghost, loop through getExpectiUtility function
+        # and get average utility of all ghosts
         else:
             combinedUtility = 0.0
-
             for action in gameState.getLegalActions(agentIndex):
                 combinedUtility +=  self.getExpectiUtility(gameState.generateSuccessor(agentIndex, action),
                                                      agentIndex + 1, depth)
@@ -339,7 +338,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
         # Get the maximum value from all Min players
         for action in gameState.getLegalActions(0):
-            # Get the minimum utility received from ghosts at index 1
+            # Get the  epectiUtility received from ghosts at index 1
             value = self.getExpectiUtility(gameState.generateSuccessor(0, action), 1, 0)
             if value > maxValue:
                 maxValue = value
@@ -359,7 +358,6 @@ def betterEvaluationFunction(currentGameState):
         - maximize distance to ghost
         - minimize distance to food
     """
-
     lastScore = currentGameState.getScore()
     food = currentGameState.getFood().asList()
     pacmanState = currentGameState.getPacmanState()
