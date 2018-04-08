@@ -357,24 +357,32 @@ def betterEvaluationFunction(currentGameState):
         - keep score consistent
         - maximize distance to ghost
         - minimize distance to food
+        - minimize distance to capsule
     """
     lastScore = currentGameState.getScore()
-    food = currentGameState.getFood().asList()
     pacmanState = currentGameState.getPacmanState()
-    direction = Actions.directionToVector(pacmanState.getDirection())
 
     if currentGameState.isWin():
-        return lastScore + sum(direction) +1
+        return lastScore
 
     position = pacmanState.getPosition()
-    distanceFood = min(list(map(lambda x: util.manhattanDistance(position, x), food)))
 
     ghostStates = currentGameState.getGhostStates()
-    distanceGhosts = min(list(map(lambda x: manhattanDistance(x.getPosition(), position), ghostStates)))
+    distanceGhosts = min(list(map(lambda x: manhattanDistance(position, x.getPosition()), ghostStates)))
 
-    directionScore = abs(sum(direction))
+    food = currentGameState.getFood().asList()
+    if food:
+        distanceFood = distanceGhosts / min(list(map(lambda x: util.manhattanDistance(position, x), food)))
+    else:
+        distanceFood = 0
 
-    return lastScore + directionScore + distanceGhosts/distanceFood
+    capsules = currentGameState.getCapsules()
+    if capsules:
+        distanceCapsules =  distanceGhosts / min(list(map(lambda x: util.manhattanDistance(position, x), capsules)))
+    else:
+        distanceCapsules = 0
+
+    return lastScore + distanceFood + distanceCapsules
 
 
 # Abbreviation
