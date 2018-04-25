@@ -16,6 +16,7 @@ from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions
 import game
+from util import nearestPoint
 
 #################
 # Team creation #
@@ -90,3 +91,34 @@ class DummyAgent(CaptureAgent):
 
     return random.choice(actions)
 
+class ReflexCaptureAgent(CaptureAgent):
+  """
+  A base class for reflex agents that chooses score-maximizing actions
+  """
+  def registerInitialState(self, gameState):
+    self.start = gameState.getAgentPosition(self.index)
+    CaptureAgent.registerInitialState(self, gameState)
+
+  def chooseAction(self, gameState):
+    return 0
+
+  def getSuccessor(self, gameState, action):
+    """
+    Finds the next successor which is a grid position (location tuple).
+    """
+    successor = gameState.generateSuccessor(self.index, action)
+    pos = successor.getAgentState(self.index).getPosition()
+    if pos != nearestPoint(pos):
+      # Only half a grid position was covered
+      return successor.generateSuccessor(self.index, action)
+    else:
+      return successor
+
+  def evaluate(self, gameState, action):
+    return 0
+
+  def getFeatures(self, gameState, action):
+    return 0
+
+  def getWeights(self, gameState, action):
+    return 0
