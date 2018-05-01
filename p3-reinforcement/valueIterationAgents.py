@@ -45,6 +45,21 @@ class ValueIterationAgent(ValueEstimationAgent):
 
         # Write value iteration code here
         "*** YOUR CODE HERE ***"
+        self.currentValue = self.values.copy()
+        # Iterate value until pre-defined iteration has been met
+        for i in range(iterations):
+            for s in mdp.getStates():
+                # Remain the currentValue if the state is in terminal
+                if mdp.isTerminal(s):
+                    newValue = 0
+                else:
+                    newValue = -float('inf')
+                    # Get the highest Q(s, a) from all possible actions
+                    for a in mdp.getPossibleActions(s):
+                        QValue = self.computeQValueFromValues(s, a)
+                        newValue = max(QValue, newValue)
+                        self.values[s] = newValue
+            self.currentValue = self.values.copy()
 
 
     def getValue(self, state):
@@ -60,6 +75,11 @@ class ValueIterationAgent(ValueEstimationAgent):
           value function stored in self.values.
         """
         "*** YOUR CODE HERE ***"
+        QValue = 0
+        for s, p in self.mdp.getTransitionStatesAndProbs(state, action):
+            # Calculate QValue of next state
+            QValue += p * (self.mdp.getReward(state, action, s) + self.discount * self.currentValue[s])
+        return QValue
         util.raiseNotDefined()
 
     def computeActionFromValues(self, state):
@@ -72,6 +92,15 @@ class ValueIterationAgent(ValueEstimationAgent):
           terminal state, you should return None.
         """
         "*** YOUR CODE HERE ***"
+        maxValue = -float('inf')
+        action = None
+        for a in self.mdp.getPossibleActions(state):
+            value = self.computeQValueFromValues(state, a)
+            # Get the optimal action by comparing QValue
+            if value > maxValue:
+                maxValue = value
+                action = a
+        return action
         util.raiseNotDefined()
 
     def getPolicy(self, state):
