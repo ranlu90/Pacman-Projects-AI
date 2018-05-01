@@ -21,7 +21,8 @@
 
 def question2():
     answerDiscount = 0.9
-    answerNoise = 0.2
+    # Assume an optimal action always lead the agent to the desired location with probability of 1
+    answerNoise = 0
     return answerDiscount, answerNoise
 
 def question3a():
