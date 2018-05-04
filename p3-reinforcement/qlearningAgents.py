@@ -72,8 +72,9 @@ class QLearningAgent(ReinforcementAgent):
           are no legal actions, which is the case at the terminal state,
           you should return None.
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legal_actions = self.getLegalActions(state)
+        successor_q_values = [self.getQValue(state, action) for action in legal_actions]
+        return max(successor_q_values) if legal_actions else 0.0
 
     def getAction(self, state):
         """
@@ -88,11 +89,9 @@ class QLearningAgent(ReinforcementAgent):
         """
         # Pick Action
         legalActions = self.getLegalActions(state)
-        action = None
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
-        return action
+        random_action = util.flipCoin(self.epsilon)
+        action = self.computeActionFromQValues(state)
+        return random.choice(legalActions) if random_action else action
 
     def update(self, state, action, nextState, reward):
         """
