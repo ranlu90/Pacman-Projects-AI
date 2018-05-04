@@ -73,8 +73,9 @@ class QLearningAgent(ReinforcementAgent):
           you should return None.
         """
         legal_actions = self.getLegalActions(state)
-        successor_q_values = [self.getQValue(state, action) for action in legal_actions]
-        return max(successor_q_values) if legal_actions else 0.0
+        successor_q_values = {action: self.getQValue(state, action) for action in legal_actions}
+        max_action = max(successor_q_values.iterkeys(), key=(lambda key: successor_q_values[key]))[0]
+        return max_action if legal_actions else None
 
     def getAction(self, state):
         """
@@ -102,8 +103,9 @@ class QLearningAgent(ReinforcementAgent):
           NOTE: You should never call this function,
           it will be called on your behalf
         """
-        "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        q_value = self.getQValue(state, action)
+        q_value += self.alpha * (reward + self.discount * (self.computeValueFromQValues(nextState) - q_value))
+        self.q_values[(state, action)] = q_value
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
