@@ -74,7 +74,7 @@ class QLearningAgent(ReinforcementAgent):
         """
         legal_actions = self.getLegalActions(state)
         successor_q_values = {action: self.getQValue(state, action) for action in legal_actions}
-        max_action = max(successor_q_values.iterkeys(), key=(lambda key: successor_q_values[key]))[0]
+        max_action = max(successor_q_values.iterkeys(), key=(lambda key: successor_q_values[key]))
         return max_action if legal_actions else None
 
     def getAction(self, state):
@@ -104,7 +104,7 @@ class QLearningAgent(ReinforcementAgent):
           it will be called on your behalf
         """
         q_value = self.getQValue(state, action)
-        q_value += self.alpha * (reward + self.discount * (self.computeValueFromQValues(nextState) - q_value))
+        q_value = (1 - self.alpha) * q_value + self.alpha * (reward + self.discount * self.computeValueFromQValues(nextState))
         self.q_values[(state, action)] = q_value
 
     def getPolicy(self, state):
