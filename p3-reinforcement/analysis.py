@@ -61,9 +61,9 @@ def question3e():
     # If not possible, return 'NOT POSSIBLE'
 
 def question6():
-    answerEpsilon = None
+    answerEpsilon = 0
     answerLearningRate = None
-    return answerEpsilon, answerLearningRate
+    return 'NOT POSSIBLE'
     # If not possible, return 'NOT POSSIBLE'
 
 if __name__ == '__main__':
