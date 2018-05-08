@@ -1,6 +1,6 @@
 
 # Created by https://www.gitignore.io/api/python,django,intellij,pycharm
-
+pacman-contest/score
 ### Django ###
 *.log
 *.pot
