@@ -101,8 +101,19 @@ class ApproximateQAgent(CaptureAgent):
     create an agent as this is the bare minimum.
     """
 
-    def __init__(self, index):
+    def __init__(self, index, epsilon=0.05, gamma=0.8, alpha=0.2, numTraining=100, **args):
         CaptureAgent.__init__(self, index)
+        args['epsilon'] = epsilon
+        args['gamma'] = gamma
+        args['alpha'] = alpha
+        args['numTraining'] = numTraining
+        self.episodesSoFar = 0
+        self.accumTrainRewards = 0.0
+        self.accumTestRewards = 0.0
+        self.numTraining = int(numTraining)
+        self.epsilon = float(epsilon)
+        self.alpha = float(alpha)
+        self.discount = float(gamma)
         self.weights = util.Counter()
 
     def registerInitialState(self, gameState):
