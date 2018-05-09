@@ -24,7 +24,7 @@ from util import nearestPoint, Counter
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='ApproximateQAgent', second='ApproximateQAgent', numTraining=0):
+               first='OffensiveAgent', second='ApproximateQAgent', numTraining=0):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -93,8 +93,20 @@ class DummyAgent(CaptureAgent):
 
         return random.choice(actions)
 
+    def getSuccessor(self, gameState, action):
+        """
+        Finds the next successor which is a grid position (location tuple).
+        """
+        successor = gameState.generateSuccessor(self.index, action)
+        pos = successor.getAgentState(self.index).getPosition()
+        if pos != nearestPoint(pos):
+            # Only half a grid position was covered
+            return successor.generateSuccessor(self.index, action)
+        else:
+            return successor
 
-class ApproximateQAgent(CaptureAgent):
+
+class ApproximateQAgent(DummyAgent):
 
     def __init__(self, index, epsilon=0.05, gamma=0.8, alpha=0.2, numTraining=0, **args):
         CaptureAgent.__init__(self, index)
@@ -143,6 +155,8 @@ class ApproximateQAgent(CaptureAgent):
         legal_actions = state.getLegalActions(self.index)
         successor_q_values = {action: self.getQValue(state, action) for action in legal_actions}
         max_action = max(successor_q_values.iterkeys(), key=(lambda key: successor_q_values[key]))
+
+        print "successor_q_values", successor_q_values
         return max_action if legal_actions else None
 
     def computeValueFromQValues(self, gameState):
@@ -159,7 +173,8 @@ class ApproximateQAgent(CaptureAgent):
 
     def chooseAction(self, gameState):
         action = self.findOptimalAction(gameState)
-        reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)
+        # TODO: reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)?
+        reward = self.getScore(gameState) - self.getScore(self.lastState)
         self.update(self.lastState, action, gameState, reward)
         self.lastState = gameState
         self.lastAction = action
@@ -177,15 +192,14 @@ class ApproximateQAgent(CaptureAgent):
         defend = len(self.getFoodYouAreDefending(state).asList())
         score = self.getScore(state)
 
-        custom_score = 10*score - food + defend
+        custom_score = 10 * score - food + defend
 
         return custom_score
 
     def getFeatures(self, state, action):
         features = util.Counter()
-
         features['food'] = len(self.getFood(state).asList())
-        features['defending'] = len(self.getFoodYouAreDefending(state).asList())
+        features['foodDefending'] = len(self.getFoodYouAreDefending(state).asList())
         features['score'] = self.getScore(state)
         # self.getCapsules(state)
         # self.getOpponents(state)
@@ -199,8 +213,6 @@ class ApproximateQAgent(CaptureAgent):
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
-
-        print self.weights
 
     def observeTransition(self, state, action, nextState, deltaReward):
         self.episodeRewards += deltaReward
@@ -253,3 +265,19 @@ class ApproximateQAgent(CaptureAgent):
         self.terminal(state)
         if self.episodesSoFar == self.numTraining:
             print(self.weights)
+
+
+class OffensiveAgent(ApproximateQAgent):
+    def getFeatures(self, state, action):
+        features = util.Counter()
+        successor = self.getSuccessor(state, action)
+        foodList = self.getFood(successor).asList()
+        features['successorScore'] = -len(foodList)  # self.getScore(successor)
+
+        # Compute distance to the nearest food
+
+        if len(foodList) > 0:  # This should always be True,  but better safe than sorry
+            myPos = successor.getAgentState(self.index).getPosition()
+            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+            features['distanceToFood'] = minDistance
+        return features
