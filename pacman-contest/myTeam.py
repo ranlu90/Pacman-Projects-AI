@@ -24,7 +24,7 @@ from util import nearestPoint, Counter
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='OffensiveAgent', second='ApproximateQAgent', numTraining=0):
+               first='OffensiveAgent', second='DummyAgent', numTraining=0):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -270,14 +270,13 @@ class ApproximateQAgent(DummyAgent):
 class OffensiveAgent(ApproximateQAgent):
     def getFeatures(self, state, action):
         features = util.Counter()
-        successor = self.getSuccessor(state, action)
-        foodList = self.getFood(successor).asList()
+        foodList = self.getFood(state).asList()
         features['successorScore'] = -len(foodList)  # self.getScore(successor)
 
         # Compute distance to the nearest food
 
         if len(foodList) > 0:  # This should always be True,  but better safe than sorry
-            myPos = successor.getAgentState(self.index).getPosition()
+            myPos = state.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
             features['distanceToFood'] = minDistance
         return features
