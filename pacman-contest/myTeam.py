@@ -102,6 +102,7 @@ class ApproximateQAgent(CaptureAgent):
         args['gamma'] = gamma
         args['alpha'] = alpha
         args['numTraining'] = numTraining
+
         self.episodesSoFar = 0
         self.accumTrainRewards = 0.0
         self.accumTestRewards = 0.0
@@ -158,7 +159,7 @@ class ApproximateQAgent(CaptureAgent):
 
     def chooseAction(self, gameState):
         action = self.findOptimalAction(gameState)
-        reward = self.getScore(gameState) - self.getScore(self.lastState)
+        reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)
         self.update(self.lastState, action, gameState, reward)
         self.lastState = gameState
         self.lastAction = action
@@ -171,6 +172,15 @@ class ApproximateQAgent(CaptureAgent):
         features = self.getFeatures(gameState, action)
         return Counter(self.weights) * Counter(features)
 
+    def getCustomScore(self, state):
+        food = len(self.getFood(state).asList())
+        defend = len(self.getFoodYouAreDefending(state).asList())
+        score = self.getScore(state)
+
+        custom_score = 10*score - food + defend
+
+        return custom_score
+
     def getFeatures(self, state, action):
         features = util.Counter()
 
@@ -180,6 +190,7 @@ class ApproximateQAgent(CaptureAgent):
         # self.getCapsules(state)
         # self.getOpponents(state)
         # self.getCurrentObservation()
+
         return features
 
     def update(self, gameState, action, nextState, reward):
@@ -188,6 +199,8 @@ class ApproximateQAgent(CaptureAgent):
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
+
+        print self.weights
 
     def observeTransition(self, state, action, nextState, deltaReward):
         self.episodeRewards += deltaReward
