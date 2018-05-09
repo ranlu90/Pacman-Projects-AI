@@ -24,7 +24,7 @@ from util import nearestPoint, Counter
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='ApproximateQAgent', second='ApproximateQAgent'):
+               first='ApproximateQAgent', second='ApproximateQAgent', numTraining=0):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -111,7 +111,6 @@ class ApproximateQAgent(CaptureAgent):
         self.discount = float(gamma)
         self.weights = util.Counter()
 
-    def startEpisode(self):
         self.lastState = None
         self.lastAction = None
         self.episodeRewards = 0.0
@@ -135,7 +134,7 @@ class ApproximateQAgent(CaptureAgent):
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
-        self.startEpisode()
+        self.lastState = gameState
         if self.episodesSoFar == 0:
             print 'Beginning %d episodes of Training' % (self.numTraining)
 
@@ -157,13 +156,12 @@ class ApproximateQAgent(CaptureAgent):
         action = self.computeActionFromQValues(gameState)
         return random.choice(legalActions) if random_action else action
 
-    def doAction(self, state, action):
-        self.lastState = state
-        self.lastAction = action
-
     def chooseAction(self, gameState):
         action = self.findOptimalAction(gameState)
-        self.doAction(gameState, action)
+        reward = self.getScore(gameState) - self.getScore(self.lastState)
+        self.update(self.lastState, action, gameState, reward)
+        self.lastState = gameState
+        self.lastAction = action
         return action
 
     def getWeights(self):
