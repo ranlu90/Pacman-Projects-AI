@@ -150,7 +150,7 @@ class ApproximateQAgent(CaptureAgent):
         successor_q_values = [self.getQValue(gameState, action) for action in legal_actions]
         return max(successor_q_values) if legal_actions else 0.0
 
-    def getAction(self, gameState):
+    def findOptimalAction(self, gameState):
         # Pick Action
         legalActions = gameState.getLegalActions(self.index)
         random_action = util.flipCoin(self.epsilon)
@@ -162,7 +162,7 @@ class ApproximateQAgent(CaptureAgent):
         self.lastAction = action
 
     def chooseAction(self, gameState):
-        action = self.getAction(gameState)
+        action = self.findOptimalAction(gameState)
         self.doAction(gameState, action)
         return action
 
