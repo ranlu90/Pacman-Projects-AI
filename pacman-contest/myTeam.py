@@ -198,9 +198,9 @@ class ApproximateQAgent(DummyAgent):
 
     def getFeatures(self, state, action):
         features = util.Counter()
-        features['food'] = len(self.getFood(state).asList())
-        features['foodDefending'] = len(self.getFoodYouAreDefending(state).asList())
-        features['score'] = self.getScore(state)
+        # features['food'] = len(self.getFood(state).asList())
+        # features['foodDefending'] = len(self.getFoodYouAreDefending(state).asList())
+        # features['score'] = self.getScore(state)
         # self.getCapsules(state)
         # self.getOpponents(state)
         # self.getCurrentObservation()
