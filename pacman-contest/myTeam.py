@@ -24,7 +24,7 @@ from util import nearestPoint, Counter
 #################
 
 def createTeam(firstIndex, secondIndex, isRed,
-               first='OffensiveAgent', second='DummyAgent', numTraining=0):
+               first='ApproximateQAgent', second='DefensiveAgent', numTraining=0):
     """
     This function should return a list of two agents that will form the
     team, initialized using firstIndex and secondIndex as their agent
@@ -77,21 +77,39 @@ class DummyAgent(CaptureAgent):
         '''
         CaptureAgent.registerInitialState(self, gameState)
 
+
         '''
         Your initialization code goes here, if you need any.
         '''
 
     def chooseAction(self, gameState):
         """
-        Picks among actions randomly.
+        Picks among the actions with the highest Q(s,a).
         """
         actions = gameState.getLegalActions(self.index)
 
-        '''
-        You should change this in your own agent.
-        '''
+        # You can profile your evaluation time by uncommenting these lines
+        # start = time.time()
+        values = [self.evaluate(gameState, a) for a in actions]
+        # print 'eval time for agent %d: %.4f' % (self.index, time.time() - start)
 
-        return random.choice(actions)
+        maxValue = max(values)
+        bestActions = [a for a, v in zip(actions, values) if v == maxValue]
+
+        foodLeft = len(self.getFood(gameState).asList())
+
+        if foodLeft <= 2:
+            bestDist = 9999
+            for action in actions:
+                successor = self.getSuccessor(gameState, action)
+                pos2 = successor.getAgentPosition(self.index)
+                dist = self.getMazeDistance(self.start, pos2)
+                if dist < bestDist:
+                    bestAction = action
+                    bestDist = dist
+            return bestAction
+
+        return random.choice(bestActions)
 
     def getSuccessor(self, gameState, action):
         """
@@ -105,10 +123,44 @@ class DummyAgent(CaptureAgent):
         else:
             return successor
 
+    def evaluate(self, gameState, action):
+        """
+        Computes a linear combination of features and feature weights
+        """
+        features = self.getFeatures(gameState, action)
+        weights = self.getWeights(gameState, action)
+        return features * weights
+
+
+
 
 class ApproximateQAgent(DummyAgent):
 
-    def __init__(self, index, epsilon=0.05, gamma=0.8, alpha=0.2, numTraining=0, **args):
+    def getSuccessor(self, gameState, action):
+        """
+        Finds the next successor which is a grid position (location tuple).
+        """
+
+        successor = gameState.generateSuccessor(self.index, action)
+
+        pos = successor.getAgentState(self.index).getPosition()
+
+        if pos != nearestPoint(pos):
+            # Only half a grid position was covered
+            return successor.generateSuccessor(self.index, action)
+        else:
+            return successor
+
+
+    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=4, **args):
+
+        # alpha - learning
+        # rate
+        # epsilon - exploration
+        # rate
+        # gamma - discount
+        # factor
+
         CaptureAgent.__init__(self, index)
         args['epsilon'] = epsilon
         args['gamma'] = gamma
@@ -127,6 +179,8 @@ class ApproximateQAgent(DummyAgent):
         self.lastState = None
         self.lastAction = None
         self.episodeRewards = 0.0
+
+
 
     def stopEpisode(self):
         if self.episodesSoFar < self.numTraining:
@@ -147,7 +201,7 @@ class ApproximateQAgent(DummyAgent):
 
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
-        self.lastState = gameState
+        #self.lastState = gameState
         if self.episodesSoFar == 0:
             print 'Beginning %d episodes of Training' % (self.numTraining)
 
@@ -166,18 +220,29 @@ class ApproximateQAgent(DummyAgent):
 
     def findOptimalAction(self, gameState):
         # Pick Action
+
         legalActions = gameState.getLegalActions(self.index)
         random_action = util.flipCoin(self.epsilon)
         action = self.computeActionFromQValues(gameState)
+        print self.epsilon
+        print random_action
         return random.choice(legalActions) if random_action else action
 
     def chooseAction(self, gameState):
         action = self.findOptimalAction(gameState)
-        # TODO: reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)?
-        reward = self.getScore(gameState) - self.getScore(self.lastState)
-        self.update(self.lastState, action, gameState, reward)
+
+        #reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)
+        #reward = self.getScore(gameState) - self.getScore(self.lastState)
+        #self.update(self.lastState, action, gameState, reward)
+
+        # Was getting invalid moves as it was trying to use this states action on lastGame state during  observeTransition
+        self.observation(gameState)
+        #self.observeTransition(self.lastState, action, gameState, reward)
+
+
         self.lastState = gameState
         self.lastAction = action
+
         return action
 
     def getWeights(self):
@@ -191,38 +256,64 @@ class ApproximateQAgent(DummyAgent):
         food = len(self.getFood(state).asList())
         defend = len(self.getFoodYouAreDefending(state).asList())
         score = self.getScore(state)
+        time = state.data.timeleft * 0.01
 
-        custom_score = 10 * score - food + defend
+        custom_score = (10 * score - food + defend + time)
 
         return custom_score
 
     def getFeatures(self, state, action):
         features = util.Counter()
-        # features['food'] = len(self.getFood(state).asList())
+
+        successor = self.getSuccessor(state, action)
+        foodList = self.getFood(successor).asList()
+        features['foodLeft'] = -len(foodList) / 100.0
+        features['foodEaten'] += state.getAgentState(self.index).numCarrying
+        #features['timeLeft'] =  state.data.timeleft /10000.0
+        # Compute distance to the nearest food
+
+        if len(foodList) > 0:  # This should always be True,  but better safe than sorry
+            myPos = successor.getAgentState(self.index).getPosition()
+            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+            features['distanceToFood'] = -minDistance / 100.0
+
+
+        return features
         # features['foodDefending'] = len(self.getFoodYouAreDefending(state).asList())
         # features['score'] = self.getScore(state)
         # self.getCapsules(state)
         # self.getOpponents(state)
-        # self.getCurrentObservation()
+        # self.getCurrentObservas)
 
-        return features
+
 
     def update(self, gameState, action, nextState, reward):
+
         features = self.getFeatures(gameState, action)
         difference = (reward + self.discount * self.computeValueFromQValues(nextState)) - self.getQValue(gameState,
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
+        print self.weights
+        print features
 
     def observeTransition(self, state, action, nextState, deltaReward):
+
+
         self.episodeRewards += deltaReward
         self.update(state, action, nextState, deltaReward)
 
-    def observationFunction(self, state):
+    def observation(self, gameState):
+        """
+        Computes a linear combination of features and feature weights
+        """
+
         if not self.lastState is None:
-            reward = state.getScore() - self.lastState.getScore()
-            self.observeTransition(self.lastState, self.lastAction, state, reward)
-        return state
+            reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)
+            #reward = gameState.getScore() - self.lastState.getScore()
+            self.observeTransition(self.lastState, self.lastAction, gameState, reward)
+
+        return gameState
 
     def terminal(self, state):
         deltaReward = state.getScore() - self.lastState.getScore()
@@ -267,16 +358,38 @@ class ApproximateQAgent(DummyAgent):
             print(self.weights)
 
 
-class OffensiveAgent(ApproximateQAgent):
-    def getFeatures(self, state, action):
+class DefensiveAgent(DummyAgent):
+
+    def chooseAction(self, state):
+        return Directions.STOP
+
+    def getFeatures(self, gameState, action):
         features = util.Counter()
-        foodList = self.getFood(state).asList()
-        features['successorScore'] = -len(foodList)  # self.getScore(successor)
+        successor = self.getSuccessor(gameState, action)
 
-        # Compute distance to the nearest food
+        myState = successor.getAgentState(self.index)
+        myPos = myState.getPosition()
 
-        if len(foodList) > 0:  # This should always be True,  but better safe than sorry
-            myPos = state.getAgentState(self.index).getPosition()
-            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-            features['distanceToFood'] = minDistance
+        # Computes whether we're on defense (1) or offense (0)
+        features['onDefense'] = 1
+        if myState.isPacman: features['onDefense'] = 0
+
+        # Computes distance to invaders we can see
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        features['numInvaders'] = len(invaders)
+        if len(invaders) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
+            features['invaderDistance'] = min(dists)
+
+        if action == Directions.STOP: features['stop'] = 1
+        rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
+        if action == rev: features['reverse'] = 1
+
         return features
+
+    def getWeights(self, gameState, action):
+        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2}
+
+
+

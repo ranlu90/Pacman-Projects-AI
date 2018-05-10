@@ -135,6 +135,7 @@ class OffensiveReflexAgent(ReflexCaptureAgent):
   """
   def getFeatures(self, gameState, action):
     features = util.Counter()
+
     successor = self.getSuccessor(gameState, action)
     foodList = self.getFood(successor).asList()    
     features['successorScore'] = -len(foodList)#self.getScore(successor)
