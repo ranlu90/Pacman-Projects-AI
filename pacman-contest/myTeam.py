@@ -83,7 +83,6 @@ class DummyAgent(CaptureAgent):
         '''
         Your initialization code goes here, if you need any.
         '''
-        # TOD ADD start atrribute for defensive agent
 
     def chooseAction(self, gameState):
         """
@@ -154,8 +153,10 @@ class ApproximateQAgent(DummyAgent):
         else:
             return successor
 
+
     def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=15, saveWeights=True, loadWeights=True,
                                   savePath="weigths.pickle", loadPath="weigths.pickle", **args):
+
         # alpha - learning
         # rate
         # epsilon - exploration
@@ -217,8 +218,6 @@ class ApproximateQAgent(DummyAgent):
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
         #self.lastState = gameState
-
-        self.timeAlive = time.time()
         if self.episodesSoFar == 0:
             print 'Beginning %d episodes of Training' % (self.numTraining)
 
@@ -227,10 +226,11 @@ class ApproximateQAgent(DummyAgent):
         legal_actions.remove(Directions.STOP)
 
         random.shuffle(legal_actions)
+
         successor_q_values = {action: self.getQValue(state, action) for action in legal_actions}
         max_action = max(successor_q_values.iterkeys(), key=(lambda key: successor_q_values[key]))
 
-        print "successor_q_values", successor_q_values
+        #print "successor_q_values", successor_q_values
         return max_action if legal_actions else None
 
     def computeValueFromQValues(self, gameState):
@@ -242,7 +242,6 @@ class ApproximateQAgent(DummyAgent):
         # Pick Action
 
         legalActions = gameState.getLegalActions(self.index)
-        legalActions.remove(Directions.STOP)
 
         if self.numTraining > 0:
             random_action = util.flipCoin(self.epsilon)
@@ -278,68 +277,13 @@ class ApproximateQAgent(DummyAgent):
 
     #TOD this can be better
     def getCustomScore(self, state):
-        foodRemaining = len(self.getFood(state).asList())
+        food = len(self.getFood(state).asList())
         defend = len(self.getFoodYouAreDefending(state).asList())
+        score = self.getScore(state)
+        time = state.data.timeleft * 0.01
 
-        #score = self.getScore(state)
+        custom_score = (10 * score - food + defend + time)
 
-        if self.red:
-            score = self.getScore(state) - self.getScore(self.getPreviousObservation())
-        else:
-            score = self.getScore(self.getPreviousObservation()) - self.getScore(state)
-        #agentDidNothing = -1 if state.getAgentState(self.index) == self.getCurrentObservation().getAgentState(self.index) else 0
-
-
-
-        # start = time.time()
-
-        timeNotDied = (time.time() - self.timeAlive) / 10.0
-
-        pickedUpFood = 1 if state.getAgentState(self.index).numCarrying - self.getPreviousObservation().getAgentState(self.index).numCarrying > 0 else 0
-        timeLeft = state.data.timeleft / 100.0
-        #carryingFood = state.getAgentState(self.index).numCarrying
-
-        if (self.getPreviousObservation().getAgentState(self.index).numCarrying - state.getAgentState(self.index).numCarrying) > 0:
-            self.timeAlive = time.time()
-            timeNotDied = 0
-            #print "REST !!!!!!!!!!!!!!!!!!!!!!!!REST ##################################"
-
-        # print "!!!!!!!!!!!!!!!!!!!!!!!"
-        # print score
-        # print time
-        # print foodRemaining
-        # print pickedUpFood
-        # print died
-        # if died != 0 :
-        #     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        #     print "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        #     print died
-        #print carryingFood
-
-        #print "!!!!!!!!!!!!!!!!!!!!!!!"
-        #print "!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        #print timeNotDied
-
-        #killed emimey if on enemys last knoww location and number of food defending jumps up
-
-
-
-        myPos = state.getAgentState(self.index).getPosition()
-
-        enemies = [state.getAgentState(i) for i in self.getOpponents(state)]
-        ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
-        if len(ghost) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
-
-            #features['ghostDistance'] = (min(dists) / 100.0)
-
-        ghostInVision = -len(ghost)
-
-        custom_score = ((10 * score) + pickedUpFood) + ghostInVision
-        #custom_score = ((10 * score + timeLeft) + pickedUpFood) + ghostInVision
-
-
-        #print custom_score
         return custom_score
 
     def getFeatures(self, state, action):
@@ -365,15 +309,10 @@ class ApproximateQAgent(DummyAgent):
 
         # Computes distance to invaders we can see
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        ghosts = [a for a in enemies if  not a.isPacman and a.getPosition() != None]
-        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        if len(ghosts) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
-            features['ghostDistance'] = (min(dists) / 100.0)
-
-        # if len(enemyPacMan) > 0:
-        #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
-        #     features['enemyPacManDistance'] = (min(dists) / 100.0)
+        ghost = [a for a in enemies if  not a.isPacman and a.getPosition() != None]
+        if len(ghost) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
+            features['ghostDistance'] = min(dists) / 100.0
         # features['numInvaders'] = len(invaders)
         # if len(invaders) > 0:
         #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
@@ -381,16 +320,11 @@ class ApproximateQAgent(DummyAgent):
         #
         #myPos = successor.getAgentState(self.index).getPosition()
 
-        #if successor.getAgentState(self.index).numCarrying > 1:
-        rev = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
-        if action == rev: features['reverse'] = 1
+        if len(foodList) > 0:  # This should always be True,  but better safe than sorry
 
-        if len(foodList) > 0 and not features['scoredPoints']:  # This should always be True,  but better safe than sorry
             #myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-            features['distanceToFood'] = -(minDistance / 100.0)
-
-
+            features['distanceToFood'] = minDistance / 100.0
 
 
         # features['distanceToBoarder'] = state.data.borderDistances[myPos] if myPos in state.data.borderDistances else 0
@@ -412,21 +346,19 @@ class ApproximateQAgent(DummyAgent):
                             self.getMazeDistance(myPos, borderPos) for borderPos in borderPositions)
                         #print (-borderDistances * successor.getAgentState(self.index).numCarrying) / 100.0
 
-                        # If no food left go home.
-                        if features['foodLeft'] == 0:
-                            risk = 1
-                        else:
-                            risk = (-borderDistances * successor.getAgentState(self.index).numCarrying) / 100.0
-                        features['foodICanReturn'] = risk
+                        features['riskOfLoosingFood'] = (-borderDistances * successor.getAgentState(self.index).numCarrying) / 1000.0
+
 
         #
-        #if self.distancer.getDistance(myPos, state.getAgentState(self.index).getPosition()) > 1.0:
-         #   features['died'] = -1.0
-            #features['riskOfLoosingFood'] = 1.0
+        if self.distancer.getDistance(myPos, state.getAgentState(self.index).getPosition()) > 1.0:
+
+            print self.distancer.getDistance(myPos, state.getAgentState(self.index).getPosition())
+            features['died'] = -1.0
+            features['riskOfLoosingFood'] = -1.0
             #features['died'] = -100 if myPos - state.getAgentState(self.index).getPosition() > 2 else 0
         #print - 100 if myPos - state.getAgentState(self.index).getPosition() > 2 else 0
 
-        #if action == Directions.STOP: features['stop'] = 1.0
+        if action == Directions.STOP: features['stop'] = -1.0
         return features
 
 
@@ -447,8 +379,8 @@ class ApproximateQAgent(DummyAgent):
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
-        print self.weights
-        print features
+        #print self.weights
+        #print features
 
     def observeTransition(self, state, action, nextState, deltaReward):
 
