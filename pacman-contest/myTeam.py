@@ -154,7 +154,7 @@ class ApproximateQAgent(DummyAgent):
             return successor
 
 
-    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=0, saveWeights=True, loadWeights=True,
+    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=0, saveWeights=False, loadWeights=False,
                                   savePath="weigths.pickle", loadPath="weigths.pickle", **args):
 
         # alpha - learning
@@ -183,15 +183,23 @@ class ApproximateQAgent(DummyAgent):
         self.savePath = savePath
         self.loadWeights = loadWeights
 
-
         if (self.loadWeights):
 
             with open(loadPath, 'rb') as f:
-                #print("loading weights from " + os.path.realpath(f.name))
+                print("loading weights from " + os.path.realpath(f.name))
                 self.weights = pickle.load(f)
-                #print(self.weights)
+                print(self.weights)
         else:
             self.weights = util.Counter()
+
+        # IF its the comp use these weights
+        if True:
+            self.weights = {'reverse': -3.1193152508543696, 'stop': -0.02860773042212779,
+                           'enemyPacManDistance': -0.19993697043215167,
+                           'scoredPoints': 20.988673473991977, 'distanceToFood': 0.6040656773252039,
+                           'foodICanReturn': 4.650475210934178,
+                           'foodLeft': 1.8896938596362576, 'ghostDistance': 2.422286242755341,
+                           'foodEaten': 0.43581990540752097, 'distanceToEnemyPacMan': -100}
 
         self.lastState = None
         self.lastAction = None
@@ -435,7 +443,7 @@ class ApproximateQAgent(DummyAgent):
                 pickle.dump(self.weights, f, pickle.HIGHEST_PROTOCOL)
         if self.episodesSoFar == self.numTraining:
             print("episode equals numTraining, begin testing afterwards")
-            print(self.weights)
+            #print(self.weights)
 
 
 class DefensiveAgent(DummyAgent):
