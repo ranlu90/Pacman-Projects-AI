@@ -154,7 +154,7 @@ class ApproximateQAgent(DummyAgent):
             return successor
 
 
-    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=15, saveWeights=True, loadWeights=True,
+    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=0, saveWeights=True, loadWeights=True,
                                   savePath="weigths.pickle", loadPath="weigths.pickle", **args):
 
         # alpha - learning
@@ -187,9 +187,9 @@ class ApproximateQAgent(DummyAgent):
         if (self.loadWeights):
 
             with open(loadPath, 'rb') as f:
-                print("loading weights from " + os.path.realpath(f.name))
+                #print("loading weights from " + os.path.realpath(f.name))
                 self.weights = pickle.load(f)
-                print(self.weights)
+                #print(self.weights)
         else:
             self.weights = util.Counter()
 
@@ -218,7 +218,7 @@ class ApproximateQAgent(DummyAgent):
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
         #self.lastState = gameState
-        if self.episodesSoFar == 0:
+        if self.episodesSoFar == 0 and self.numTraining != 0:
             print 'Beginning %d episodes of Training' % (self.numTraining)
 
     def computeActionFromQValues(self, state):
@@ -259,7 +259,8 @@ class ApproximateQAgent(DummyAgent):
         #self.update(self.lastState, action, gameState, reward)
 
         # Was getting invalid moves as it was trying to use this states action on lastGame state during  observeTransition
-        self.observation(gameState)
+        if self.numTraining > 0:
+            self.observation(gameState)
         #self.observeTransition(self.lastState, action, gameState, reward)
 
 
@@ -269,6 +270,8 @@ class ApproximateQAgent(DummyAgent):
         return action
 
     def getWeights(self):
+        self.weights['distanceToEnemyPacMan'] = -100
+
         return self.weights
 
     def getQValue(self, gameState, action):
@@ -276,14 +279,29 @@ class ApproximateQAgent(DummyAgent):
         return Counter(self.weights) * Counter(features)
 
     #TOD this can be better
+
     def getCustomScore(self, state):
-        food = len(self.getFood(state).asList())
+        foodRemaining = len(self.getFood(state).asList())
         defend = len(self.getFoodYouAreDefending(state).asList())
-        score = self.getScore(state)
-        time = state.data.timeleft * 0.01
 
-        custom_score = (10 * score - food + defend + time)
+        score = self.getScore(state) - self.getScore(self.getPreviousObservation())
 
+
+        pickedUpFood = 1 if state.getAgentState(
+            self.index).numCarrying - self.getPreviousObservation().getAgentState(self.index).numCarrying > 0 else 0
+        timeLeft = state.data.timeleft / 100.0
+
+
+        enemies = [state.getAgentState(i) for i in self.getOpponents(state)]
+        ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+        # if len(ghost) > 0:
+        #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
+
+        ghostInVision = -len(ghost)
+
+        custom_score = ((10 * score + timeLeft) + pickedUpFood) + ghostInVision
+
+        #print custom_score
         return custom_score
 
     def getFeatures(self, state, action):
@@ -294,81 +312,50 @@ class ApproximateQAgent(DummyAgent):
         myPos = successor.getAgentState(self.index).getPosition()
 
 
-        features['foodLeft'] = -len(foodList) / 100.0
+        # TODO need to add check for if blue team as we want to lose points
+        features['scoredPoints'] = self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(
+            state) > 0 else 0
+        features['foodEaten'] = 1.0 if successor.getAgentState(self.index).numCarrying - state.getAgentState(
+            self.index).numCarrying > 0 else 0
 
-        #TODO need to add check for if blue team as we want to lose points
-        features['scoredPoints'] = self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(state) > 0 else 0
-        features['foodEaten'] = 1.0 if successor.getAgentState(self.index).numCarrying - state.getAgentState(self.index).numCarrying > 0 else 0
-        #features['timeLeft'] =  state.data.timeleft /10000.0
-        # Compute distance to the nearest food
-
-        # Doesnt seem to do much
-        # features['killedWithFood'] = (state.getAgentState(self.index).numCarrying - successor.getAgentState(self.index).numCarrying)
-
-        #features['distanceToGhost']
-
-        # Computes distance to invaders we can see
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        ghost = [a for a in enemies if  not a.isPacman and a.getPosition() != None]
-        if len(ghost) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
-            features['ghostDistance'] = min(dists) / 100.0
-        # features['numInvaders'] = len(invaders)
-        # if len(invaders) > 0:
-        #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-        #     features['invaderDistance'] = min(dists)
-        #
-        #myPos = successor.getAgentState(self.index).getPosition()
+        ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        if len(ghosts) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
+            features['ghostDistance'] = (min(dists) / 100.0)
 
-        if len(foodList) > 0:  # This should always be True,  but better safe than sorry
+        if len(enemyPacMan) > 0:
+             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
+             features['enemyPacManDistance'] = (min(dists) / 100.0)
 
-            #myPos = successor.getAgentState(self.index).getPosition()
+        if len(foodList) > 0 and features['scoredPoints'] == 0 and features['foodEaten'] == 0:  # This should always be True,  but better safe than sorry
+            # myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-            features['distanceToFood'] = minDistance / 100.0
+            features['distanceToFood'] = -(minDistance / 100.0)
 
-
-        # features['distanceToBoarder'] = state.data.borderDistances[myPos] if myPos in state.data.borderDistances else 0
         if state.getAgentState(self.index).isPacman:
-            halfway = self.getFood(state).width / 2
-            borderPositions = [(halfway, y) for y in range(self.getFood(state).height) if not state.hasWall(halfway, y)]
+            middle = self.getFood(state).width / 2
+            borderLine = [(middle, y) for y in range(self.getFood(state).height) if
+                               not state.hasWall(middle, y)]
 
-            grid = state.getWalls()
-            halfway = grid.width / 2
+
             if not self.red:
-                xrange = range(halfway)
+                xRange = range(middle)
             else:
-                xrange = range(halfway, grid.width)
+                xRange = range(middle, self.getFood(state).width)
 
-            for x in xrange:
-                for y in range(grid.height):
-                    if not grid[x][y]:
+            for x in xRange:
+                for y in range(self.getFood(state).height):
+                    if not self.getFood(state)[x][y]:
                         borderDistances = min(
-                            self.getMazeDistance(myPos, borderPos) for borderPos in borderPositions)
-                        #print (-borderDistances * successor.getAgentState(self.index).numCarrying) / 100.0
+                            self.getMazeDistance(myPos, borderPos) for borderPos in borderLine)
 
-                        features['riskOfLoosingFood'] = (-borderDistances * successor.getAgentState(self.index).numCarrying) / 1000.0
+                        features['foodICanReturn'] = ((-borderDistances * successor.getAgentState(
+                            self.index).numCarrying) / 100.0)
 
-
-        #
-        if self.distancer.getDistance(myPos, state.getAgentState(self.index).getPosition()) > 1.0:
-
-            print self.distancer.getDistance(myPos, state.getAgentState(self.index).getPosition())
-            features['died'] = -1.0
-            features['riskOfLoosingFood'] = -1.0
-            #features['died'] = -100 if myPos - state.getAgentState(self.index).getPosition() > 2 else 0
-        #print - 100 if myPos - state.getAgentState(self.index).getPosition() > 2 else 0
-
-        if action == Directions.STOP: features['stop'] = -1.0
         return features
 
-
-
-
-        # features['foodDefending'] = len(self.getFoodYouAreDefending(state).asList())
-        # features['score'] = self.getScore(state)
-        # self.getCapsules(state)
-        # self.getOpponents(state)
-        # self.getCurrentObservas)
 
 
 
@@ -439,12 +426,12 @@ class ApproximateQAgent(DummyAgent):
     def final(self, state):
         # call the super-class final method
         self.terminal(state)
-        print(self.weights)
+        #print(self.weights)
 
         if self.saveWeights:
 
             with open(self.savePath, 'wb') as f:
-                print("saving weights to " + os.path.realpath(f.name))
+                #print("saving weights to " + os.path.realpath(f.name))
                 pickle.dump(self.weights, f, pickle.HIGHEST_PROTOCOL)
         if self.episodesSoFar == self.numTraining:
             print("episode equals numTraining, begin testing afterwards")
