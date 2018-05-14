@@ -146,29 +146,18 @@ class DummyAgent(CaptureAgent):
             self.distributions[opponents[i]][enemieStart] = 1
             i += 1
 
-    def neighborLocationsGrid(self, opponent):
-        neighborGrid = self.distributions[opponent].copy()
-        for (position, status) in self.distributions[opponent].items():
-            config = Configuration(position, Directions.STOP)
-            actions = Actions.getPossibleActions(config, self.walls)
-            for action in actions:
-                dir = Actions.directionToVector(action)
-                new_pos = (abs(dir[0] + position[0]), abs(dir[1] + position[1]))
-                neighborGrid[new_pos] = 1
-        return neighborGrid
+    # def reverseManhatten(self, position, distance):
+    #     up = [(position[0] + x, position[1] + distance - abs(x)) for x in range(-distance, distance + 1)]
+    #     down = [(position[0] + distance - abs(x), position[1] + x) for x in range(-distance, distance + 1)]
+    #
+    #     print [(position[0] + x, position[1] + distance - x) for x in range(distance + 1)]
 
-    def reverseManhatten(self, position, distance):
-        up = [(position[0] + x, position[1] + distance - abs(x)) for x in range(-distance, distance + 1)]
-        down = [(position[0] + distance - abs(x), position[1] + x) for x in range(-distance, distance + 1)]
-
-        print [(position[0] + x, position[1] + distance - x) for x in range(distance + 1)]
-
-    def manhattenDistanceGrid(self, gameState, opponent):
-        distance = self.getCurrentObservation().getAgentDistances()[opponent]
-        noise = 6
-        position = gameState.getAgentState(self.index).getPosition()
-        self.reverseManhatten(position, distance)
-        pass
+    # def manhattenDistanceGrid(self, gameState, opponent):
+    #     distance = self.getCurrentObservation().getAgentDistances()[opponent]
+    #     noise = 6
+    #     position = gameState.getAgentState(self.index).getPosition()
+    #     self.reverseManhatten(position, distance)
+    #     pass
 
     def updateEnemyDistributions(self, gameState):
         for (opponent, positions) in self.distributions.items():
@@ -177,8 +166,18 @@ class DummyAgent(CaptureAgent):
                 self.distributions[opponent] = dict()
                 self.distributions[opponent][opponentAgentPosition] = 1
             else:
-                neighborGrid = self.neighborLocationsGrid(opponent)
-                manhattenGrid = self.manhattenDistanceGrid(gameState, opponent)
+                for (position, status) in self.distributions[opponent].items():
+                    config = Configuration(position, Directions.STOP)
+                    actions = Actions.getPossibleActions(config, self.walls)
+                    for action in actions:
+                        dir = Actions.directionToVector(action)
+                        new_position = (abs(dir[0] + position[0]), abs(dir[1] + position[1]))
+                        max_distance = self.getCurrentObservation().getAgentDistances()[opponent] + 6
+                        min_distance = self.getCurrentObservation().getAgentDistances()[opponent] - 6
+                        distance = util.manhattanDistance(position, new_position)
+                        if distance < 5 or distance < min_distance or distance > max_distance:
+                            self.distributions[opponent][new_position] = 1
+
 
 class ApproximateQAgent(DummyAgent):
 
