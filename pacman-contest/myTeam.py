@@ -342,11 +342,13 @@ class ApproximateQAgent(DummyAgent):
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
             features['distanceToFood'] = -(minDistance / 100.0)
 
-        if state.getAgentState(self.index).isPacman:
+        
+        #TODO add distance to friendly if can see don't move towards it unless it can see a ghost 
+        #TODO add if we have 5 food return
+        if state.getAgentState(self.index).isPacman and features['distanceToFood'] < -2 / 100.0:
             middle = self.getFood(state).width / 2
             borderLine = [(middle, y) for y in range(self.getFood(state).height) if
                                not state.hasWall(middle, y)]
-
 
             if not self.red:
                 xRange = range(middle)
