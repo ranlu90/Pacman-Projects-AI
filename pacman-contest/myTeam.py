@@ -79,34 +79,6 @@ class DummyAgent(CaptureAgent):
         '''
         CaptureAgent.registerInitialState(self, gameState)
 
-        distance = 34
-        myPos = (30, 12)
-        location = myPos
-        noise = 12
-
-        noiseLocationGrid = set()
-
-
-        location = location[0], location[1] + distance
-        noiseLocationGrid.add(location)
-
-        j = 1
-        for i in range(0, distance):
-            location = (location[0] + j, location[1] - j)
-            noiseLocationGrid.add(location)
-
-            # add noise
-
-           # borderLocation = (location[0], location[1] + noise)
-           # noiseLocationGrid.add(borderLocation)
-           # for i in range(0, noise):
-           #     location = (location[0] + j, location[1] - j)
-
-            #    for()
-
-
-
-        print noiseLocationGrid
         '''
         Your initialization code goes here, if you need any.
         '''
@@ -324,12 +296,10 @@ class ApproximateQAgent(DummyAgent):
     def getWeights(self):
         self.weights['distanceToEnemyPacMan'] = -100
 
-        print self.weights
         return self.weights
 
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
-        print(self.weights)
         return Counter(self.weights) * Counter(features)
 
 
@@ -378,7 +348,6 @@ class ApproximateQAgent(DummyAgent):
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
             if(min(dists) < 5):
                 features['ghostDistance'] = (min(dists) * 2 / 100.0)
-                print (features['ghostDistance'])
 
         if len(enemyPacMan) > 0:
              dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
@@ -451,7 +420,7 @@ class ApproximateQAgent(DummyAgent):
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
-        print self.weights
+        #print self.weights
         #print features
 
     def observeTransition(self, state, action, nextState, deltaReward):
