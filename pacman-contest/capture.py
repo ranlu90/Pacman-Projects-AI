@@ -352,6 +352,7 @@ def halfList(l, grid, red):
 #                     THE HIDDEN SECRETS OF PACMAN                         #
 #                                                                          #
 # You shouldn't need to look through the code in this section of the file. #
+
 ############################################################################
 
 COLLISION_TOLERANCE = 0.7 # How close ghosts must be to Pacman to kill
@@ -391,6 +392,8 @@ class CaptureRules:
     if state.isOver():
       game.gameOver = True
       if not game.rules.quiet:
+
+
         redCount = 0
         blueCount = 0
         foodToWin = (TOTAL_FOOD/2) - MIN_FOOD

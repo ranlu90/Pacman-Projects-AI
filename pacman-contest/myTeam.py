@@ -64,7 +64,7 @@ class DummyAgent(CaptureAgent):
         agent to populate useful fields (such as what team
         we're on).
 
-        A distanceCalculator instance caches the maze distances
+        A distanceCa?lculator instance caches the maze distances
         between each pair of positions, so your agents can use:
         self.distancer.getDistance(p1, p2)
 
@@ -79,7 +79,34 @@ class DummyAgent(CaptureAgent):
         '''
         CaptureAgent.registerInitialState(self, gameState)
 
+        distance = 34
+        myPos = (30, 12)
+        location = myPos
+        noise = 12
 
+        noiseLocationGrid = set()
+
+
+        location = location[0], location[1] + distance
+        noiseLocationGrid.add(location)
+
+        j = 1
+        for i in range(0, distance):
+            location = (location[0] + j, location[1] - j)
+            noiseLocationGrid.add(location)
+
+            # add noise
+
+           # borderLocation = (location[0], location[1] + noise)
+           # noiseLocationGrid.add(borderLocation)
+           # for i in range(0, noise):
+           #     location = (location[0] + j, location[1] - j)
+
+            #    for()
+
+
+
+        print noiseLocationGrid
         '''
         Your initialization code goes here, if you need any.
         '''
@@ -154,15 +181,15 @@ class ApproximateQAgent(DummyAgent):
             return successor
 
 
-    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=0, saveWeights=False, loadWeights=False,
-                                  savePath="weigths.pickle", loadPath="weigths.pickle", **args):
+    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=20, saveWeights=True, loadWeights=True,
+                                  playingInComp=False, savePath="weigths.pickle", loadPath="weigths.pickle", **args):
 
         # alpha - learning
         # rate
         # epsilon - exploration
         # rate
         # gamma - discount
-        # factor
+        # factor/
 
         CaptureAgent.__init__(self, index)
         args['epsilon'] = epsilon
@@ -178,6 +205,7 @@ class ApproximateQAgent(DummyAgent):
         self.alpha = float(alpha)
         self.discount = float(gamma)
         self.weights = util.Counter()
+        self.playingInComp =playingInComp
 
         self.saveWeights = saveWeights
         self.savePath = savePath
@@ -193,7 +221,7 @@ class ApproximateQAgent(DummyAgent):
             self.weights = util.Counter()
 
         # IF its the comp use these weights
-        if True:
+        if playingInComp:
             self.weights = {'reverse': -3.1193152508543696, 'stop': -0.02860773042212779,
                            'enemyPacManDistance': -0.19993697043215167,
                            'scoredPoints': 20.988673473991977, 'distanceToFood': 0.6040656773252039,
@@ -226,7 +254,7 @@ class ApproximateQAgent(DummyAgent):
     def registerInitialState(self, gameState):
         CaptureAgent.registerInitialState(self, gameState)
         #self.lastState = gameState
-        if self.episodesSoFar == 0 and self.numTraining != 0:
+        if self.episodesSoFar == 0 and self.numTraining == 0:
             print 'Beginning %d episodes of Training' % (self.numTraining)
 
     def computeActionFromQValues(self, state):
@@ -262,12 +290,8 @@ class ApproximateQAgent(DummyAgent):
     def chooseAction(self, gameState):
         action = self.findOptimalAction(gameState)
 
-        #reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)
-        #reward = self.getScore(gameState) - self.getScore(self.lastState)
-        #self.update(self.lastState, action, gameState, reward)
-
         # Was getting invalid moves as it was trying to use this states action on lastGame state during  observeTransition
-        if self.numTraining > 0:
+        if not self.playingInComp:
             self.observation(gameState)
         #self.observeTransition(self.lastState, action, gameState, reward)
 
@@ -286,7 +310,6 @@ class ApproximateQAgent(DummyAgent):
         features = self.getFeatures(gameState, action)
         return Counter(self.weights) * Counter(features)
 
-    #TOD this can be better
 
     def getCustomScore(self, state):
         foodRemaining = len(self.getFood(state).asList())
@@ -337,15 +360,29 @@ class ApproximateQAgent(DummyAgent):
              dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
              features['enemyPacManDistance'] = (min(dists) / 100.0)
 
-        if len(foodList) > 0 and features['scoredPoints'] == 0 and features['foodEaten'] == 0:  # This should always be True,  but better safe than sorry
-            # myPos = successor.getAgentState(self.index).getPosition()
-            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
-            features['distanceToFood'] = -(minDistance / 100.0)
 
         
         #TODO add distance to friendly if can see don't move towards it unless it can see a ghost 
         #TODO add if we have 5 food return
-        if state.getAgentState(self.index).isPacman and features['distanceToFood'] < -2 / 100.0:
+        #TODO do not occupy the space of friendly. 
+        #TODO do not move closer to friendly if in sight range and can not see enemys
+
+        #TODO and not carraying food
+        #print(features['foodIcanReturn'])
+        #print (successor.getAgentState(self.index).numCarrying != 0)
+        if len(foodList) > 0 and features['scoredPoints'] == 0 \
+                and features['foodEaten'] == 0: #and (borderDistance < -2 / 100.0 and not features['foodICanReturn']):
+            # myPos = successor.getAgentState(self.index).getPosition()
+            minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+            features['distanceToFood'] = -(minDistance / 100.0)
+
+        else:
+            #print("do not care about distanceToFood")
+            features['distanceToFood'] = 0
+
+
+        borderDistance = 0
+        if state.getAgentState(self.index).isPacman:
             middle = self.getFood(state).width / 2
             borderLine = [(middle, y) for y in range(self.getFood(state).height) if
                                not state.hasWall(middle, y)]
@@ -358,11 +395,21 @@ class ApproximateQAgent(DummyAgent):
             for x in xRange:
                 for y in range(self.getFood(state).height):
                     if not self.getFood(state)[x][y]:
-                        borderDistances = min(
+                        borderDistance = min(
                             self.getMazeDistance(myPos, borderPos) for borderPos in borderLine)
 
-                        features['foodICanReturn'] = ((-borderDistances * successor.getAgentState(
+                        features['foodICanReturn'] = ((-borderDistance * successor.getAgentState(
                             self.index).numCarrying) / 100.0)
+
+                        if(features['distanceToFood'] > -2 / 100.0):
+                            features['foodICanReturn'] = 0
+                            #print("do not care about returning food")
+
+
+        # if we have have food and are close to the board disregard distance to food
+        if(borderDistance > -2 / 100.0 and features['foodICanReturn'] and not features['distanceToFood'] > - 2 / 100.0):
+            features['distanceToFood'] = 0
+            #print "disregard"
 
         return features
 
@@ -376,7 +423,7 @@ class ApproximateQAgent(DummyAgent):
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
-        #print self.weights
+        print self.weights
         #print features
 
     def observeTransition(self, state, action, nextState, deltaReward):
@@ -441,7 +488,7 @@ class ApproximateQAgent(DummyAgent):
         if self.saveWeights:
 
             with open(self.savePath, 'wb') as f:
-                #print("saving weights to " + os.path.realpath(f.name))
+                print("saving weights to " + os.path.realpath(f.name))
                 pickle.dump(self.weights, f, pickle.HIGHEST_PROTOCOL)
         if self.episodesSoFar == self.numTraining:
             print("episode equals numTraining, begin testing afterwards")
