@@ -60,9 +60,9 @@ class DummyAgent(CaptureAgent):
 
     distributions = dict()
     teamsInitialPosition = dict()
+    enemiesStartingPos = dict()
     teamsRegistered = False
     walls = []
-
     def registerInitialState(self, gameState):
         """
         This method handles the initial setup of the
@@ -127,7 +127,7 @@ class DummyAgent(CaptureAgent):
 
     def debugBelieveSystem(self):
         for (opponent, distribution) in self.distributions.items():
-            self.debugDraw(distribution.keys(), [1, 0, 0], True)
+                    self.debugDraw(distribution.keys(), [1, 0, 0], True)
 
     def setInitialDistributions(self, gameState):
         """
@@ -142,6 +142,8 @@ class DummyAgent(CaptureAgent):
             # For one opponent's distribution
             enemieStart = (wallPos.width - position[0] - 1,
                            wallPos.height - position[1] - 1)
+
+            self.enemiesStartingPos[opponents[i]] = enemieStart
             self.distributions[opponents[i]] = Counter()
             self.distributions[opponents[i]][enemieStart] = 1
             i += 1
@@ -159,7 +161,9 @@ class DummyAgent(CaptureAgent):
     #     self.reverseManhatten(position, distance)
     #     pass
 
-    def updateEnemyDistributions(self, gameState):
+    def updateEnemyDistributions(self, gameState, secoundPass=False):
+
+
         for (opponent, positions) in self.distributions.items():
             opponentAgentPosition = gameState.getAgentState(opponent).getPosition()
             if not opponentAgentPosition == None:
@@ -169,14 +173,42 @@ class DummyAgent(CaptureAgent):
                 for (position, status) in self.distributions[opponent].items():
                     config = Configuration(position, Directions.STOP)
                     actions = Actions.getPossibleActions(config, self.walls)
+
+                    if(secoundPass):
+                        actions = [Directions.STOP] 
+
                     for action in actions:
                         dir = Actions.directionToVector(action)
                         new_position = (abs(dir[0] + position[0]), abs(dir[1] + position[1]))
-                        max_distance = self.getCurrentObservation().getAgentDistances()[opponent] + 6
-                        min_distance = self.getCurrentObservation().getAgentDistances()[opponent] - 6
-                        distance = util.manhattanDistance(position, new_position)
-                        if distance < 5 or distance < min_distance or distance > max_distance:
+
+
+                        noise_distance = self.getCurrentObservation().getAgentDistances()[opponent]
+                        # distance is 7 as we need to include there possible movie taking them outside of our ping area
+                        max_distance = noise_distance + 7
+                        min_distance = noise_distance - 7
+
+                        myPos = gameState.getAgentState(self.index).getPosition()
+                        distance = util.manhattanDistance(myPos, new_position)
+
+                        # Check possible locations that fit inside the noise reading minus the area we can see
+                        # add the visula range of my team mate as well
+                        if distance >= min_distance and  distance <= max_distance and distance > 4:
                             self.distributions[opponent][new_position] = 1
+                        else:
+                            self.distributions[opponent].pop(new_position, None)
+
+            # If we kill them reset distributions
+        if not self.distributions[opponent]:
+            self.distributions[opponent][self.enemiesStartingPos[opponent]] = 1
+            self.updateEnemyDistributions(gameState)
+
+        for (opponent, distribution) in self.distributions.items():
+            if(opponent == 1):
+                self.debugDraw(distribution.keys(), [1, 0, 0], True)
+            if(opponent == 3):
+                self.debugDraw(distribution.keys(), [0, 0, 1], True)
+
+
 
 
 class ApproximateQAgent(DummyAgent):
@@ -322,7 +354,7 @@ class ApproximateQAgent(DummyAgent):
         self.lastState = gameState
         self.lastAction = action
 
-        self.debugBelieveSystem()
+        #self.debugBelieveSystem()
 
         return action
 
@@ -447,25 +479,24 @@ class ApproximateQAgent(DummyAgent):
             self.lastWindowAccumRewards = 0.0
         self.lastWindowAccumRewards += state.getScore()
 
-        NUM_EPS_UPDATE = 100
-        if self.episodesSoFar % NUM_EPS_UPDATE == 0:
-            print 'Reinforcement Learning Status:'
-            windowAvg = self.lastWindowAccumRewards / float(NUM_EPS_UPDATE)
-            if self.episodesSoFar <= self.numTraining:
-                trainAvg = self.accumTrainRewards / float(self.episodesSoFar)
-                print '\tCompleted %d out of %d training episodes' % (
-                    self.episodesSoFar, self.numTraining)
-                print '\tAverage Rewards over all training: %.2f' % (
-                    trainAvg)
-            else:
-                testAvg = float(self.accumTestRewards) / (self.episodesSoFar - self.numTraining)
-                print '\tCompleted %d test episodes' % (self.episodesSoFar - self.numTraining)
-                print '\tAverage Rewards over testing: %.2f' % testAvg
-            print '\tAverage Rewards for last %d episodes: %.2f' % (
-                NUM_EPS_UPDATE, windowAvg)
-            print '\tEpisode took %.2f seconds' % (time.time() - self.episodeStartTime)
-            self.lastWindowAccumRewards = 0.0
-            self.episodeStartTime = time.time()
+#        if self.episodesSoFar % NUM_EPS_UPDATE == 0:
+#            print 'Reinforcement Learning Status:'
+#            windowAvg = self.lastWindowAccumRewards / float(NUM_EPS_UPDATE)
+#            if self.episodesSoFar <= self.numTraining:
+#                trainAvg = self.accumTrainRewards / float(self.episodesSoFar)
+#                print '\tCompleted %d out of %d training episodes' % (
+#                    self.episodesSoFar, self.numTraining)
+#                print '\tAverage Rewards over all training: %.2f' % (
+#                    trainAvg)
+#            else:
+#                testAvg = float(self.accumTestRewards) / (self.episodesSoFar - self.numTraining)
+#                print '\tCompleted %d test episodes' % (self.episodesSoFar - self.numTraining)
+#                print '\tAverage Rewards over testing: %.2f' % testAvg
+#            print '\tAverage Rewards for last %d episodes: %.2f' % (
+#                NUM_EPS_UPDATE, windowAvg)
+#            print '\tEpisode took %.2f seconds' % (time.time() - self.episodeStartTime)
+#            self.lastWindowAccumRewards = 0.0
+#            self.episodeStartTime = time.time()
 
         if self.episodesSoFar == self.numTraining:
             msg = 'Training Done (turning off epsilon and alpha)'
@@ -495,6 +526,8 @@ class DefensiveAgent(DummyAgent):
         if not self.teamsRegistered:
             self.setInitialDistributions(gameState)
             self.teamsRegistered = True
+        else:
+            self.updateEnemyDistributions(gameState, True)
 
         actions = gameState.getLegalActions(self.index)
 
