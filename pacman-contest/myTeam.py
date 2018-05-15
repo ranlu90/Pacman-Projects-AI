@@ -181,8 +181,8 @@ class ApproximateQAgent(DummyAgent):
             return successor
 
 
-    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=20, saveWeights=True, loadWeights=True,
-                                  playingInComp=False, savePath="weigths.pickle", loadPath="weigths.pickle", **args):
+    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=0, saveWeights=False, loadWeights=False,
+                                  playingInComp=True, savePath="weigths.pickle", loadPath="weigths.pickle", **args):
 
         # alpha - learning
         # rate
@@ -222,11 +222,12 @@ class ApproximateQAgent(DummyAgent):
 
         # IF its the comp use these weights
         if playingInComp:
-            self.weights = {'reverse': -3.1193152508543696, 'stop': -0.02860773042212779,
+            print("loading comp values")
+            self.weights = {'reverse': -0.1193152508543696, 'stop': -0.02860773042212779,
                            'enemyPacManDistance': -0.19993697043215167,
-                           'scoredPoints': 20.988673473991977, 'distanceToFood': 0.6040656773252039,
+                           'scoredPoints': 20.988673473991977, 'distanceToFood': 0.9040656773252039,
                            'foodICanReturn': 4.650475210934178,
-                           'foodLeft': 1.8896938596362576, 'ghostDistance': 2.422286242755341,
+                           'foodLeft': 1.8896938596362576, 'ghostDistance': 10.422286242755341,
                            'foodEaten': 0.43581990540752097, 'distanceToEnemyPacMan': -100}
 
         self.lastState = None
@@ -279,7 +280,7 @@ class ApproximateQAgent(DummyAgent):
 
         legalActions = gameState.getLegalActions(self.index)
 
-        if self.numTraining > 0:
+        if self.isInTraining():
             random_action = util.flipCoin(self.epsilon)
         else: random_action = False
 
@@ -291,9 +292,28 @@ class ApproximateQAgent(DummyAgent):
         action = self.findOptimalAction(gameState)
 
         # Was getting invalid moves as it was trying to use this states action on lastGame state during  observeTransition
-        if not self.playingInComp:
+        if not self.playingInComp and self.isInTraining():
             self.observation(gameState)
         #self.observeTransition(self.lastState, action, gameState, reward)
+
+
+        #TODO get unstuck
+        #currentState = gameState
+        #prevState = self.getPreviousObservation()
+        #nextState = gameState.getSuccessor(self.index, action)
+        #currentPostion = currentState.getAgentState(self.index).getPosition()
+        #prevPosition = prevState.getAgentState(self.index).getPosition()
+        #if(currentPostion == prevPostion and prevPostion == nextPostion):
+            #pick random_action
+
+            
+        #currentState = prevState
+
+
+        #if(gameState.getAgentState(self.index).getPosition()
+
+
+       
 
 
         self.lastState = gameState
@@ -304,10 +324,12 @@ class ApproximateQAgent(DummyAgent):
     def getWeights(self):
         self.weights['distanceToEnemyPacMan'] = -100
 
+        print self.weights
         return self.weights
 
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
+        print(self.weights)
         return Counter(self.weights) * Counter(features)
 
 
@@ -354,13 +376,18 @@ class ApproximateQAgent(DummyAgent):
         enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
         if len(ghosts) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
-            features['ghostDistance'] = (min(dists) / 100.0)
+            if(min(dists) < 5):
+                features['ghostDistance'] = (min(dists) * 2 / 100.0)
+                print (features['ghostDistance'])
 
         if len(enemyPacMan) > 0:
              dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
-             features['enemyPacManDistance'] = (min(dists) / 100.0)
+             if(min(dists) < 5):
+                features['enemyPacManDistance'] = (min(dists) / 100.0)
 
 
+        rev = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
+        if action == rev: features['reverse'] = 1
         
         #TODO add distance to friendly if can see don't move towards it unless it can see a ghost 
         #TODO add if we have 5 food return
@@ -398,16 +425,17 @@ class ApproximateQAgent(DummyAgent):
                         borderDistance = min(
                             self.getMazeDistance(myPos, borderPos) for borderPos in borderLine)
 
+
                         features['foodICanReturn'] = ((-borderDistance * successor.getAgentState(
                             self.index).numCarrying) / 100.0)
 
-                        if(features['distanceToFood'] > -2 / 100.0):
+                        if(features['distanceToFood'] > -3 / 100.0):
                             features['foodICanReturn'] = 0
                             #print("do not care about returning food")
 
 
         # if we have have food and are close to the board disregard distance to food
-        if(borderDistance > -2 / 100.0 and features['foodICanReturn'] and not features['distanceToFood'] > - 2 / 100.0):
+        if(borderDistance > -3 / 100.0 and features['foodICanReturn'] and not features['distanceToFood'] > - 2 / 100.0):
             features['distanceToFood'] = 0
             #print "disregard"
 
