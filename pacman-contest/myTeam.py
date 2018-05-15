@@ -397,7 +397,7 @@ class ApproximateQAgent(DummyAgent):
         #TODO and not carraying food
         #print(features['foodIcanReturn'])
         #print (successor.getAgentState(self.index).numCarrying != 0)
-        if len(foodList) > 0 and features['scoredPoints'] == 0 \
+        if len(foodList) > 0 and features['scoredPoints'] == 0 and not features['ghostDistance']\
                 and features['foodEaten'] == 0: #and (borderDistance < -2 / 100.0 and not features['foodICanReturn']):
             # myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
