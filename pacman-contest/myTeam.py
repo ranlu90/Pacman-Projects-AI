@@ -136,17 +136,59 @@ class DummyAgent(CaptureAgent):
 
         wallPos = gameState.getWalls()
         opponents = self.getOpponents(gameState)
-        i = 0
 
+        #set initial position
+
+        teamIndex = self.getTeam(gameState)
+        self.teamsInitialPosition[teamIndex[0]] = gameState.getAgentState(teamIndex[0]).getPosition()
+        self.teamsInitialPosition[teamIndex[1]] = gameState.getAgentState(teamIndex[1]).getPosition()
+        
+        i = 0
         for (agent, position) in self.teamsInitialPosition.items():
             # For one opponent's distribution
             enemieStart = (wallPos.width - position[0] - 1,
                            wallPos.height - position[1] - 1)
 
             self.enemiesStartingPos[opponents[i]] = enemieStart
+            print enemieStart
             self.distributions[opponents[i]] = Counter()
             self.distributions[opponents[i]][enemieStart] = 1
             i += 1
+
+        self.updateEnemyDistributions(gameState)
+        print self.distributions
+
+
+        if not self.distributions[opponents[0]]:#[self.enemiesStartingPos[1]]: 
+            # reverse positions asigned to each agent
+        
+            #team = self.getTeam(gameState)
+            #temp = self.teamsInitialPosition[team[0]] 
+            #self.teamsInitialPosition[team[0]] = self.teamsInitialPosition[team[1]]
+            #self.teamsInitialPosition[team[1]] = temp 
+
+
+            print self.teamsInitialPosition
+
+                
+
+            i = 0 
+            for (agent, position) in self.teamsInitialPosition.items(): 
+                # For one opponent's distribution
+                enemieStart = (wallPos.width - position[0] - 1,
+                               position[1])
+
+                self.enemiesStartingPos[opponents[i]] = enemieStart
+                print enemieStart
+                print self.debugDraw(enemieStart, [0,1,0], False)
+                self.distributions[opponents[i]] = Counter()
+                self.distributions[opponents[i]][enemieStart] = 1
+
+                i += 1
+                print "another test"
+
+            
+            
 
     # def reverseManhatten(self, position, distance):
     #     up = [(position[0] + x, position[1] + distance - abs(x)) for x in range(-distance, distance + 1)]
@@ -161,7 +203,7 @@ class DummyAgent(CaptureAgent):
     #     self.reverseManhatten(position, distance)
     #     pass
 
-    def updateEnemyDistributions(self, gameState, secoundPass=False):
+    def updateEnemyDistributions(self, gameState, secoundPass=False, deepth=0):
 
 
         for (opponent, positions) in self.distributions.items():
@@ -197,16 +239,25 @@ class DummyAgent(CaptureAgent):
                         else:
                             self.distributions[opponent].pop(new_position, None)
 
+
+            if deepth == 1:
+                print "test"
+                return False
             # If we kill them reset distributions
-        if not self.distributions[opponent]:
-            self.distributions[opponent][self.enemiesStartingPos[opponent]] = 1
-            self.updateEnemyDistributions(gameState)
+            if not self.distributions[opponent]:
+                self.distributions[opponent][self.enemiesStartingPos[opponent]] = 1
+                self.updateEnemyDistributions(gameState, deepth = deepth + 1)
+                return False
+
+        
 
         for (opponent, distribution) in self.distributions.items():
-            if(opponent == 1):
-                self.debugDraw(distribution.keys(), [1, 0, 0], True)
+            #if(opponent == 1):
+            #    self.debugDraw(distribution.keys(), [1, 0, 0], True)
             if(opponent == 3):
                 self.debugDraw(distribution.keys(), [0, 0, 1], True)
+
+        return True
 
 
 
@@ -334,11 +385,13 @@ class ApproximateQAgent(DummyAgent):
         return random.choice(legalActions) if random_action else action
 
     def chooseAction(self, gameState):
+
         if not self.teamsRegistered:
+            print "registering Team"
             self.setInitialDistributions(gameState)
             self.teamsRegistered = True
-        else:
-            self.updateEnemyDistributions(gameState)
+
+        self.updateEnemyDistributions(gameState)
 
         action = self.findOptimalAction(gameState)
 
@@ -517,17 +570,13 @@ class DefensiveAgent(DummyAgent):
 
     def registerInitialState(self, gameState):
         DummyAgent.registerInitialState(self, gameState)
-        self.teamsInitialPosition[self.index] = gameState.getAgentState(self.index).getPosition()
 
     def chooseAction(self, gameState):
         """
         Picks among the actions with the highest Q(s,a).
         """
-        if not self.teamsRegistered:
-            self.setInitialDistributions(gameState)
-            self.teamsRegistered = True
-        else:
-            self.updateEnemyDistributions(gameState, True)
+        
+        self.updateEnemyDistributions(gameState, True)
 
         actions = gameState.getLegalActions(self.index)
 
