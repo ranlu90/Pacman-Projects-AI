@@ -150,28 +150,14 @@ class DummyAgent(CaptureAgent):
                            wallPos.height - position[1] - 1)
 
             self.enemiesStartingPos[opponents[i]] = enemieStart
-            print enemieStart
             self.distributions[opponents[i]] = Counter()
             self.distributions[opponents[i]][enemieStart] = 1
             i += 1
 
         self.updateEnemyDistributions(gameState)
-        print self.distributions
-
 
         if not self.distributions[opponents[0]]:#[self.enemiesStartingPos[1]]: 
             # reverse positions asigned to each agent
-        
-            #team = self.getTeam(gameState)
-            #temp = self.teamsInitialPosition[team[0]] 
-            #self.teamsInitialPosition[team[0]] = self.teamsInitialPosition[team[1]]
-            #self.teamsInitialPosition[team[1]] = temp 
-
-
-            print self.teamsInitialPosition
-
-                
-
             i = 0 
             for (agent, position) in self.teamsInitialPosition.items(): 
                 # For one opponent's distribution
@@ -179,30 +165,10 @@ class DummyAgent(CaptureAgent):
                                position[1])
 
                 self.enemiesStartingPos[opponents[i]] = enemieStart
-                print enemieStart
-                print self.debugDraw(enemieStart, [0,1,0], False)
                 self.distributions[opponents[i]] = Counter()
                 self.distributions[opponents[i]][enemieStart] = 1
-
                 i += 1
-                print "another test"
-
-            
-            
-
-    # def reverseManhatten(self, position, distance):
-    #     up = [(position[0] + x, position[1] + distance - abs(x)) for x in range(-distance, distance + 1)]
-    #     down = [(position[0] + distance - abs(x), position[1] + x) for x in range(-distance, distance + 1)]
-    #
-    #     print [(position[0] + x, position[1] + distance - x) for x in range(distance + 1)]
-
-    # def manhattenDistanceGrid(self, gameState, opponent):
-    #     distance = self.getCurrentObservation().getAgentDistances()[opponent]
-    #     noise = 6
-    #     position = gameState.getAgentState(self.index).getPosition()
-    #     self.reverseManhatten(position, distance)
-    #     pass
-
+           
     def updateEnemyDistributions(self, gameState, secoundPass=False, deepth=0):
 
 
@@ -223,9 +189,9 @@ class DummyAgent(CaptureAgent):
                         dir = Actions.directionToVector(action)
                         new_position = (abs(dir[0] + position[0]), abs(dir[1] + position[1]))
 
-
                         noise_distance = self.getCurrentObservation().getAgentDistances()[opponent]
-                        # distance is 7 as we need to include there possible movie taking them outside of our ping area
+
+                        # distance is 7 as we need to include thier next move taking them outside of our ping area
                         max_distance = noise_distance + 7
                         min_distance = noise_distance - 7
 
@@ -239,17 +205,13 @@ class DummyAgent(CaptureAgent):
                         else:
                             self.distributions[opponent].pop(new_position, None)
 
-
             if deepth == 1:
-                print "test"
                 return False
+
             # If we kill them reset distributions
             if not self.distributions[opponent]:
                 self.distributions[opponent][self.enemiesStartingPos[opponent]] = 1
-                self.updateEnemyDistributions(gameState, deepth = deepth + 1)
-                return False
-
-        
+                return self.updateEnemyDistributions(gameState, deepth = deepth + 1)
 
         for (opponent, distribution) in self.distributions.items():
             #if(opponent == 1):
@@ -387,7 +349,6 @@ class ApproximateQAgent(DummyAgent):
     def chooseAction(self, gameState):
 
         if not self.teamsRegistered:
-            print "registering Team"
             self.setInitialDistributions(gameState)
             self.teamsRegistered = True
 
