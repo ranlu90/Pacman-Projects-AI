@@ -138,7 +138,6 @@ class DummyAgent(CaptureAgent):
         opponents = self.getOpponents(gameState)
 
         #set initial position
-<<<<<<< HEAD
 
         teamIndex = self.getTeam(gameState)
         self.teamsInitialPosition[teamIndex[0]] = gameState.getAgentState(teamIndex[0]).getPosition()
@@ -214,6 +213,7 @@ class DummyAgent(CaptureAgent):
                 self.distributions[opponent][self.enemiesStartingPos[opponent]] = 1
                 return self.updateEnemyDistributions(gameState, deepth = deepth + 1)
 
+        # For debuging
         for (opponent, distribution) in self.distributions.items():
             #if(opponent == 1):
             #    self.debugDraw(distribution.keys(), [1, 0, 0], True)
@@ -227,7 +227,7 @@ class DummyAgent(CaptureAgent):
 
 class ApproximateQAgent(DummyAgent):
 
-    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=0, saveWeights=False, loadWeights=False,
+    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=10, saveWeights=False, loadWeights=False,
                  savePath="weigths.pickle", loadPath="weigths.pickle", **args):
 
         # alpha - learning
@@ -357,19 +357,12 @@ class ApproximateQAgent(DummyAgent):
 
         action = self.findOptimalAction(gameState)
 
-        # reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)
-        # reward = self.getScore(gameState) - self.getScore(self.lastState)
-        # self.update(self.lastState, action, gameState, reward)
-
-        # Was getting invalid moves as it was trying to use this states action on lastGame state during  observeTransition
+        # Might be better to let it learn during a game just don't save the new weights 
         if self.numTraining > 0:
             self.observation(gameState)
-        # self.observeTransition(self.lastState, action, gameState, reward)
 
         self.lastState = gameState
         self.lastAction = action
-
-        #self.debugBelieveSystem()
 
         return action
 
@@ -384,35 +377,43 @@ class ApproximateQAgent(DummyAgent):
 
     # TODO this can be better
 
-    def getCustomScore(self, state):
+    def getCustomScore(self, currentGameState):
+
         #foodRemaining = len(self.getFood(state).asList())
         #defend = len(self.getFoodYouAreDefending(state).asList())
+        #timeLeft = currentGameState.data.timeleft / 100.0
+        
+        prevGameState = self.getPreviousObservation()
+
+        myAgentState = currentGameState.getAgentState(self.index)
+
+        teamIndexs = self.getTeam(currentGameState)
+        teamIndexs.remove(self.index)
+        teamMateIndex = teamIndexs[0]
+        #teamMateState = currentGameState.getAgentState(iteamMateIndex)
+
+        myPostion = currentGameState.getAgentPosition(self.index)
+        teamMatePosition = currentGameState.getAgentPosition(teamMateIndex)
 
         if self.red:
-            score = self.getScore(state) - self.getScore(self.getPreviousObservation())
+            score = self.getScore(currentGameState) - self.getScore(self.getPreviousObservation())
         else:
-            score = -1 * (self.getScore(state) - self.getScore(self.getPreviousObservation()))
+            score = -1 * (self.getScore(currentGameState) - self.getScore(self.getPreviousObservation()))
 
-        
-        pickedUpFood = 1 if state.getAgentState(
-            self.index).numCarrying - self.getPreviousObservation().getAgentState(self.index).numCarrying > 0 else 0
-        timeLeft = state.data.timeleft / 100.0
+        # Am I standing where food used to be
+        pickedUpFood = 1 if prevGameState.hasFood(myPostion[0], myPostion[1]) and myPostion != teamMatePosition else 0
 
-        state.getFood()
-
-        prevGameState = self.getPreviousObservation()
-        print prevGameState.hasFood(self.index)
-        # and I am standing where food use to be
-
-        enemies = [state.getAgentState(i) for i in self.getOpponents(state)]
+        enemies = [currentGameState.getAgentState(i) for i in self.getOpponents(currentGameState)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
         # if len(ghost) > 0:
         #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
 
+        if len(ghost) > 0 :
+            print self.getMazeDistance(myPostion, ghost[0].getPosition())
         #change this to ghost 1 move away from me
         ghostInVision = -len(ghost)
 
-        custom_score = ((10 * score + timeLeft) + pickedUpFood) + ghostInVision
+        custom_score = ((10 * score) + pickedUpFood) + ghostInVision
 
         return custom_score
 
@@ -425,6 +426,8 @@ class ApproximateQAgent(DummyAgent):
 
         # TODO need to add check for if blue team as we want to lose points
 
+        # TODO if time left is less then some number run for home
+        # how long does it take for us to move and make sure we are always in range of making it home if we have food
 
         #TODO add features distance too food distance to ghost and the difrance between thoes numbers
         if self.red:
@@ -480,21 +483,26 @@ class ApproximateQAgent(DummyAgent):
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
-                enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
+
 
         if len(ghosts) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
-        scared = sum([ghost.scaredTimer for ghost in ghosts])/len(ghosts)
-        run = 1
-        if scared > 2:
-            run = -1
-        features['ghostDistance'] = run * (min(dists) / 100.0)
+            scared = sum([ghost.scaredTimer for ghost in ghosts])/len(ghosts)
+            run = 1
+            if scared > 2:
+                run = -1
+                
+            features['ghostDistance'] = run * (min(dists) / 100.0)
+
         if len(enemyPacMan) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
-        run = 1
-        if successor.getAgentState(self.index).scaredTimer > 2:
-            run = -1
-        features['enemyPacManDistance'] = run * (min(dists) / 100.0)
+            run = 1
+            
+            if successor.getAgentState(self.index).scaredTimer > 2:
+                run = -1
+
+            features['enemyPacManDistance'] = run * (min(dists) / 100.0)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         return features
