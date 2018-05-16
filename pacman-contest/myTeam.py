@@ -385,20 +385,31 @@ class ApproximateQAgent(DummyAgent):
     # TODO this can be better
 
     def getCustomScore(self, state):
-        foodRemaining = len(self.getFood(state).asList())
-        defend = len(self.getFoodYouAreDefending(state).asList())
+        #foodRemaining = len(self.getFood(state).asList())
+        #defend = len(self.getFoodYouAreDefending(state).asList())
 
-        score = self.getScore(state) - self.getScore(self.getPreviousObservation())
+        if self.red:
+            score = self.getScore(state) - self.getScore(self.getPreviousObservation())
+        else:
+            score = -1 * (self.getScore(state) - self.getScore(self.getPreviousObservation()))
 
+        
         pickedUpFood = 1 if state.getAgentState(
             self.index).numCarrying - self.getPreviousObservation().getAgentState(self.index).numCarrying > 0 else 0
         timeLeft = state.data.timeleft / 100.0
+
+        state.getFood()
+
+        prevGameState = self.getPreviousObservation()
+        print prevGameState.hasFood(self.index)
+        # and I am standing where food use to be
 
         enemies = [state.getAgentState(i) for i in self.getOpponents(state)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
         # if len(ghost) > 0:
         #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
 
+        #change this to ghost 1 move away from me
         ghostInVision = -len(ghost)
 
         custom_score = ((10 * score + timeLeft) + pickedUpFood) + ghostInVision
@@ -416,8 +427,14 @@ class ApproximateQAgent(DummyAgent):
 
 
         #TODO add features distance too food distance to ghost and the difrance between thoes numbers
-        features['scoredPoints'] = self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(
-            state) > 0 else 0
+        if self.red:
+            features['scoredPoints'] = self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(
+                state) > 0 else 0
+        else:
+            features['scoredPoints'] = -self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(
+                state) < 0 else 0
+            
+
         features['foodEaten'] = 1.0 if successor.getAgentState(self.index).numCarrying - state.getAgentState(
             self.index).numCarrying > 0 else 0
 
@@ -458,6 +475,27 @@ class ApproximateQAgent(DummyAgent):
 
                         features['foodICanReturn'] = ((-borderDistances * successor.getAgentState(
                             self.index).numCarrying) / 100.0)
+                        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+
+
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+                enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
+
+        if len(ghosts) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
+        scared = sum([ghost.scaredTimer for ghost in ghosts])/len(ghosts)
+        run = 1
+        if scared > 2:
+            run = -1
+        features['ghostDistance'] = run * (min(dists) / 100.0)
+        if len(enemyPacMan) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
+        run = 1
+        if successor.getAgentState(self.index).scaredTimer > 2:
+            run = -1
+        features['enemyPacManDistance'] = run * (min(dists) / 100.0)
+        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         return features
 
