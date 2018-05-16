@@ -138,6 +138,7 @@ class DummyAgent(CaptureAgent):
         opponents = self.getOpponents(gameState)
 
         #set initial position
+<<<<<<< HEAD
 
         teamIndex = self.getTeam(gameState)
         self.teamsInitialPosition[teamIndex[0]] = gameState.getAgentState(teamIndex[0]).getPosition()
@@ -412,6 +413,9 @@ class ApproximateQAgent(DummyAgent):
         myPos = successor.getAgentState(self.index).getPosition()
 
         # TODO need to add check for if blue team as we want to lose points
+
+
+        #TODO add features distance too food distance to ghost and the difrance between thoes numbers
         features['scoredPoints'] = self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(
             state) > 0 else 0
         features['foodEaten'] = 1.0 if successor.getAgentState(self.index).numCarrying - state.getAgentState(
