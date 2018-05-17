@@ -213,21 +213,20 @@ class DummyAgent(CaptureAgent):
                 self.distributions[opponent][self.enemiesStartingPos[opponent]] = 1
                 return self.updateEnemyDistributions(gameState, deepth = deepth + 1)
 
-        # For debuging
-        for (opponent, distribution) in self.distributions.items():
-            #if(opponent == 1):
-            #    self.debugDraw(distribution.keys(), [1, 0, 0], True)
-            if(opponent == 3):
-                self.debugDraw(distribution.keys(), [0, 0, 1], True)
+#        # For debuging
+#        for (opponent, distribution) in self.distributions.items():
+#            #if(opponent == 1):
+#            #    self.debugDraw(distribution.keys(), [1, 0, 0], True)
+#            if(opponent == 3):
+#                self.debugDraw(distribution.keys(), [0, 0, 1], True)
 
         return True
 
 
 
-
 class ApproximateQAgent(DummyAgent):
 
-    def __init__(self, index, epsilon=0.2, gamma=0.2, alpha=0.2, numTraining=10, saveWeights=False, loadWeights=False,
+    def __init__(self, index, epsilon=0.001, gamma=0.9, alpha=0.1, numTraining=0, saveWeights=False, loadWeights=False,
                  savePath="weigths.pickle", loadPath="weigths.pickle", **args):
 
         # alpha - learning
@@ -269,13 +268,20 @@ class ApproximateQAgent(DummyAgent):
 
         # IF its the comp use these weights
         if True:
-            self.weights = {'reverse': -3.1193152508543696, 'stop': -0.02860773042212779,
-                            'enemyPacManDistance': -0.19993697043215167,
-                            'scoredPoints': 20.988673473991977, 'distanceToFood': 0.6040656773252039,
-                            'foodICanReturn': 4.650475210934178,
-                            'foodLeft': 1.8896938596362576, 'ghostDistance': 2.422286242755341,
-                            'foodEaten': 0.43581990540752097, 'distanceToEnemyPacMan': -100}
+            self.weights = {'enemyPacManDistance': 3.5177004950197802, 'scoredPoints': 17.392823999999997, 
+                    'distanceToFood': 1.0827753607280046, 'foodICanReturn': -1.0866415843544661, 
+                    'ghostDistance': 8.19742345269455042, 'foodEaten': 6.2513475884878105, 'invaders': -10}
 
+
+#
+#
+#            self.weights = {'reverse': -3.1193152508543696, 'stop': -0.02860773042212779,
+#                            'enemyPacManDistance': -0.19993697043215167,
+#                            'scoredPoints': 20.988673473991977, 'distanceToFood': 7.6040656773252039,
+#                            'foodICanReturn': 4.650475210934178,
+#                            'foodLeft': 1.8896938596362576, 'ghostDistance': 2.422286242755341,
+#                            'foodEaten': 0.43581990540752097, 'distanceToEnemyPacMan': -100}
+#
         self.lastState = None
         self.lastAction = None
         self.episodeRewards = 0.0
@@ -339,6 +345,7 @@ class ApproximateQAgent(DummyAgent):
         legalActions = gameState.getLegalActions(self.index)
 
         if self.numTraining > 0:
+            self.epsilon * 0.9
             random_action = util.flipCoin(self.epsilon)
         else:
             random_action = False
@@ -382,8 +389,14 @@ class ApproximateQAgent(DummyAgent):
         #foodRemaining = len(self.getFood(state).asList())
         #defend = len(self.getFoodYouAreDefending(state).asList())
         #timeLeft = currentGameState.data.timeleft / 100.0
-        
+
+
+        #TODO scoring should only relate to the agent who is scoreing
         prevGameState = self.getPreviousObservation()
+
+        # Game just started
+        if prevGameState == None:
+            return 0
 
         myAgentState = currentGameState.getAgentState(self.index)
 
@@ -395,115 +408,374 @@ class ApproximateQAgent(DummyAgent):
         myPostion = currentGameState.getAgentPosition(self.index)
         teamMatePosition = currentGameState.getAgentPosition(teamMateIndex)
 
+        #TODO fix we are getting negitive points for scoreing swap around
+        score = 0
         if self.red:
-            score = self.getScore(currentGameState) - self.getScore(self.getPreviousObservation())
+            if myAgentState.numCarrying == 0 and prevGameState.getAgentState(self.index).numCarrying > 0:
+                score =  self.getScore(currentGameState) - self.getScore(self.getPreviousObservation()) 
         else:
-            score = -1 * (self.getScore(currentGameState) - self.getScore(self.getPreviousObservation()))
+            if myAgentState.numCarrying == 0 and prevGameState.getAgentState(self.index).numCarrying > 0:
+                score =  self.getScore(self.getPreviousObservation()) - self.getScore(currentGameState)
 
         # Am I standing where food used to be
-        pickedUpFood = 1 if prevGameState.hasFood(myPostion[0], myPostion[1]) and myPostion != teamMatePosition else 0
+        #TODO and is not our food we are defending
+        pickedUpFood = 1 if self.getFood(prevGameState)[myPostion[0]][myPostion[1]] and myPostion != teamMatePosition else 0
+        #if pickedUpFood:
+        #    self.debugDraw(myPostion, [1,0,0])
+        #    print pickedUpFood
 
+
+        #Need to fix this
         enemies = [currentGameState.getAgentState(i) for i in self.getOpponents(currentGameState)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
         # if len(ghost) > 0:
         #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
 
+        
+        inKillZone = 0
+        nearGhost = 0
+        closestGhostDistance = 999 
         if len(ghost) > 0 :
-            print self.getMazeDistance(myPostion, ghost[0].getPosition())
+            dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
+            closestGhostDistance = min(dists)
+            if min(dists) < 3:
+                inKillZone = -3 
+                #nearGhost = -2
+                #inKillZone = -5 if self.getMazeDistance(prevGameState.getAgentPosition(self.index), ghost[0].getPosition()) <= 4 else 0
+        
+        #TODO is there an enemy one away from me, im about to die 
+        died = 0
+        #if util.manhattanDistance(myAgentState.getPosition(), prevGameState.getAgentState(self.index).getPosition()) > 1:
+
+        # not garnted to die but assume playing against a good agent in which I will be dead
+        if closestGhostDistance == 1:
+            died = -1
+            #self.debugDraw(myAgentState.getPosition(), [1,0,0])
+
+        #TODO add punshiment for succidding into a ghost
+
+        #TODO maybe add reward for killing pacman? 
         #change this to ghost 1 move away from me
-        ghostInVision = -len(ghost)
+        #ghostInVision = -len(ghost)
+#        win = 0
+#        if currentGameState.isOver():
+#            print "GAM OVER"
+#        
+#            redCount = 0
+#            blueCount = 0
+#            for index in range(state.getNumAgents()):
+#                agentState = state.data.agentStates[index]
+#                if index in state.getRedTeamIndices():
+#                    redCount += agentState.numReturned
+#                else:
+#                    blueCount += agentState.numReturned
+#
+#            if self.red and redCount > blueCount:
+#                win = 1
+#            else:
+#                win - 1
+#
+        #TODO check what win is doing
+        customScore = 10 * score + pickedUpFood + inKillZone + nearGhost #+ died
 
-        custom_score = ((10 * score) + pickedUpFood) + ghostInVision
+        #print "score"
+        #print customScore
 
-        return custom_score
+        return customScore
 
     def getFeatures(self, state, action):
         features = util.Counter()
 
+        #TODO repeated vars in getFeatures and customScore
         successor = self.getSuccessor(state, action)
+        currentAgentState = state.getAgentState(self.index)
+        successorAgentState = successor.getAgentState(self.index)
+
+
+        prevGameState = self.getPreviousObservation()
         foodList = self.getFood(successor).asList()
+        defendingFood = self.getFoodYouAreDefending(state)
+        myPrevPos = state.getAgentState(self.index).getPosition()
         myPos = successor.getAgentState(self.index).getPosition()
 
-        # TODO need to add check for if blue team as we want to lose points
+        teamIndexs = self.getTeam(state)
+        teamIndexs.remove(self.index)
+        teamMateIndex = teamIndexs[0]
+        teamMatePosition = state.getAgentPosition(teamMateIndex)
 
         # TODO if time left is less then some number run for home
         # how long does it take for us to move and make sure we are always in range of making it home if we have food
 
         #TODO add features distance too food distance to ghost and the difrance between thoes numbers
-        if self.red:
-            features['scoredPoints'] = self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(
-                state) > 0 else 0
-        else:
-            features['scoredPoints'] = -self.getScore(successor) / 100.0 if self.getScore(successor) - self.getScore(
-                state) < 0 else 0
+
+        # First round initalising new game ignore feature space
+        if util.manhattanDistance(currentAgentState.getPosition(), self.teamsInitialPosition[self.index]) == 0:
+            return features
+
+
+        #TODO don't think this is working
+        # We died
+     #   if util.manhattanDistance(currentAgentState.getPosition(), successorAgentState.getPosition()) > 1:
+     #       features.clear()
+     #       features['died'] = 1
+     #       self.debugDraw(state.getAgentState(self.index).getPosition(), [0,1,0])
+     #       return features
+
+        
+
+        #TODO fix the pacman get points for before killing him not when killed him
+        #remove returning food 
+        if prevGameState: 
+            prevScore = self.getScore(successor)
+            currentScore = self.getScore(state)
+
+           #TODO test this to make sure its working
+           # should change this so that you only get points when you score and not your team mate
+           
+            if self.red:
+                if prevScore - currentScore  > 0:
+                    features['scoredPoints'] = 1 
+            else:
+                if currentScore - prevScore < 0:
+                    features['scoredPoints'] = 1 
             
+            #pickedUpFood = 1 if self.getFood(prevGameState)[myPostion[0]][myPostion[1]] and myPostion != teamMatePosition else 0
+            features['foodEaten'] = 1 if self.getFood(prevGameState)[int(myPos[0])][int(myPos[1])] and myPos!= teamMatePosition else 0 
 
-        features['foodEaten'] = 1.0 if successor.getAgentState(self.index).numCarrying - state.getAgentState(
-            self.index).numCarrying > 0 else 0
+        #food I can return los points when i die
+        # when I die ghost distance gets bonuns points
+        # when moving away from pacman and away from food lose points 
 
-        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)] 
         ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
-        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
+
+        closestGhostDistance = float('inf')
+        closestPacmanDistance = float('inf')
+        # Can be killed by ghost
+        
+        # do not care about this if they are scarded
         if len(ghosts) > 0:
+            #TODO getting the closes dists from any agent instead of from me
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
-            features['ghostDistance'] = (min(dists) / 100.0)
+            closestGhostDistance = min(dists)
+            #print closestGhostDistance
+            #print self.index
 
+            locationsOfGhosts = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
+            enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+            ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+            for ghost in ghosts:
+                if closestGhostDistance <= 2 or self.getMazeDistance(myPos, ghost.getPosition()) == 1: #or self.getMazeDistance(myPos, ghost.getPosition()) == 1:
+                    if not ghost.scaredTimer:
+                        #TODO rename to inKillZone
+                        features['ghostDistance'] = 1
+                        return features 
+
+
+#TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+#TODO issue eating food when close to ghost and runing away flips ghost value
+        # Can kill pacman
+        
+        #TODO add a mechanism if enemy pacman two to the right stop and block by staying on the same horizontial
+        
+        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
         if len(enemyPacMan) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
-            features['enemyPacManDistance'] = (min(dists) / 100.0)
+            dists = [self.getMazeDistance(myPrevPos, a.getPosition()) for a in enemyPacMan]
+            closestPacmanDistance = min(dists) 
+            for pacman in ghosts:
+                if myPos == pacman.getPosition() or closestPacmanDistance <= 1:  
+                    features.clear()
+                    features['enemyPacManDistance'] = 1 
 
-        if len(foodList) > 0 and features['scoredPoints'] == 0 and features[
-            'foodEaten'] == 0:  # This should always be True,  but better safe than sorry
+                    #self.debugDraw(myPos, [1,0,0])
+                    return features
+
+        #TODO and if ghost is close its scarded we can still hunt food
+        # also check we didnt die 
+        if len(foodList) > 0 and features['foodEaten'] == 0 and not features['ghostDistance'] == 1:  
             # myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
             features['distanceToFood'] = -(minDistance / 100.0)
+        else:
+            features['distanceToFood'] = 0
+                                
 
+        if state.isOver() or successor.isOver():
+                features.clear()
+                features['scoredPoints'] = currentScore 
+                return features
+          
         # TODO add distance to friendly if can see don't move towards it unless it can see a ghost
         # TODO add if we have 5 food return
-        if state.getAgentState(self.index).isPacman and features['distanceToFood'] < -2 / 100.0:
-            middle = self.getFood(state).width / 2
-            borderLine = [(middle, y) for y in range(self.getFood(state).height) if
-                          not state.hasWall(middle, y)]
+        # TODO if ghost 3 away try to head home
+#        if state.getAgentState(self.index).isPacman and features['distanceToFood'] < -2 / 100.0:
+#            middle = self.getFood(state).width / 2
+#            borderLine = [(middle, y) for y in range(self.getFood(state).height) if not state.hasWall(middle, y)]
+#
+#            if not self.red:
+#                xRange = range(middle)
+#            else:
+#                xRange = range(middle, self.getFood(state).width)
+#
+#            for x in xRange:
+#                for y in range(self.getFood(state).height):
+#                    if not self.getFood(state)[x][y]:
+#                        borderDistances = min(
+#                            self.getMazeDistance(myPos, borderPos) for borderPos in borderLine)
+#
+#                        features['foodICanReturn'] = ((-borderDistances * successor.getAgentState(
+#                            self.index).numCarrying) / 100.0)
+#                        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
 
-            if not self.red:
-                xRange = range(middle)
-            else:
-                xRange = range(middle, self.getFood(state).width)
+        #TODO best way to make him return ???
+        #once there is less then a certain percentage of food return home
 
-            for x in xRange:
-                for y in range(self.getFood(state).height):
-                    if not self.getFood(state)[x][y]:
-                        borderDistances = min(
-                            self.getMazeDistance(myPos, borderPos) for borderPos in borderLine)
-
-                        features['foodICanReturn'] = ((-borderDistances * successor.getAgentState(
-                            self.index).numCarrying) / 100.0)
-                        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        # if I move into enemey kill zone while trying to return food makes it negative Also when running away while scared
+#        minBoarderDistance = 0
+#        if successor.getAgentState(self.index).isPacman and closestGhostDistance < 5 and not features['ghostDistance'] == 0 and not currentAgentState.scaredTimer or currentAgentState.numCarrying > 5:
+#            middle = self.getFood(state).width / 2
+#            borderLine = [(middle, y) for y in range(self.getFood(state).height) if not state.hasWall(middle, y)]
+#
+#            if not self.red:
+#                xRange = range(middle)
+#            else:
+#                xRange = range(middle, self.getFood(state).width)
+#
+#            for x in xRange:
+#                for y in range(self.getFood(state).height):
+#                    if not self.getFood(state)[x][y]:
+#                        minBorderDistance = min(self.getMazeDistance(myPos, borderPos) for borderPos in borderLine)
+#
+#
+#                        features['foodICanReturn'] = (minBorderDistance / 100.0) *  currentAgentState.numCarrying / 100.0
+#
 
 
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
-        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
 
-
+        #TODO only try to kill the enemy ghost if it has 2 or less turns of beging scared
+        #TODO Scared stuff doesnt seem to work
         if len(ghosts) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
             scared = sum([ghost.scaredTimer for ghost in ghosts])/len(ghosts)
-            run = 1
-            if scared > 2:
-                run = -1
-                
-            features['ghostDistance'] = run * (min(dists) / 100.0)
+
+            if min(dists) < 2 and scared > 2:
+                features['ghostDistance'] = -1 #* (min(dists) / 100.0)
 
         if len(enemyPacMan) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
-            run = 1
-            
-            if successor.getAgentState(self.index).scaredTimer > 2:
-                run = -1
 
-            features['enemyPacManDistance'] = run * (min(dists) / 100.0)
+            #TODO might want to run untill not scared anymore
+            if min(dists) < 3 and state.getAgentState(self.index).scaredTimer > 2:
+                features['enemyPacManDistance'] = -1 #* (min(dists) / 100.0)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+        #if action == Directions.STOP: features['stop'] = 1
+        rev = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
+        if action == rev: features['reverse'] = 1
+        #TODO if im chasing scared pacman ignore ghost 
+        #TODO if im chasing scared ghost ignore pacman
+        #TODO if we are chasing ghost don't care about distance to food
+        #If enemey ghost can see us run home
+        #TODO if I can kill pacman dont care about any other feature 
+        #TODO if I can be killed by ghost dont care about any other feature
+
+
+        #TODO scoredpoints not working correctel
+
+    #!!!!!!!!!!!!!!!!!!
+       #TODO ghost distance dicrision when moving towards it // moving toward food 
+       #TODO score not working as out of sncy need to get current and next state not previouse
+
+       #TODO use our food instead of boarder
+
+        # NOTE: The order of this is very important 
+        # Enemy ghost can kill us 
+        if features['ghostDistance'] == 1:
+            features.clear()
+            features['ghostDistance'] = 1
+            return features
+
+        # kill scared enemy ghost
+        elif features['ghostDistance'] == -1:
+            features.clear()
+            features['ghostDistance'] = -1
+            return features
+
+        # Kill enemy pacman
+        elif features['enemyPacManDistance'] ==  1:
+            features.clear()
+            features['enemyPacManDistance'] = 1
+            return features
+
+        # Score one for the home team ^_^
+        elif features['scoredPoints'] == 1:
+            features.clear()
+            features['scoredPoints'] = 1
+            return features
+
+        elif features['scoredPoints'] == -1:
+            features.clear()
+            features['scoredPoints'] = -1
+
+        # Enemy pacman can kill us (we are scared)
+        elif features['enemyPacManDistance'] < 0:
+            features.clear()
+            features['enemyPacManDistance']  = -1 
+            return features
+        
+
+        # Num num eat some tasy food stuffs
+        elif features['foodEaten'] == 1:
+            features.clear()
+            features['foodEaten'] = 1
+            return features
+
+        # Run home if ghost close to us and no tasty food close by
+        elif closestGhostDistance < 4 or successorAgentState.numCarrying > 5:
+            features.clear()
+            #add distanceToFood
+
+
+        # Computes distance to invaders we can see
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        features['numInvaders'] = len(invaders)
+        if len(invaders) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
+            features['invaderDistance'] = min(dists)
+
+
+
+            # Try not get struck
+            rev = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
+            if action == rev: features['reverse'] = 1
+
+            features['foodICanReturn'] = self.getMazeDistance(myPos, self.teamsInitialPosition[self.index]) / 100.0
+            return features
+
+        #TODO add we died feature??
+        #TODO kill enemy ghost when scared doesnt work
+
+        #TODO if enemy scores points don't include distancetofood
+        #elif features['scoredPoints']:
+        #    pa
+
+        # Check if we got points for no reason, bug not to do with what we did
+        # So ignore reward 
+        if self.getCustomScore(state) > 0:
+            features.clear()
+            return features
+
+
+        #TODO check if there is a ghost close enough to kill us before getting more food
+        # Like within 3 steps
+        # If nothing else go find some food to eat
+        temp = features['distanceToFood']
+        features.clear()
+        features['distanceToFood'] = temp
 
         return features
 
@@ -514,6 +786,7 @@ class ApproximateQAgent(DummyAgent):
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
+        #print self.weights
 
     def observeTransition(self, state, action, nextState, deltaReward):
 
@@ -525,15 +798,16 @@ class ApproximateQAgent(DummyAgent):
         Computes a linear combination of features and feature weights
         """
 
-        if not self.lastState is None:
+            
+        if not self.lastState == None:
             reward = self.getCustomScore(gameState) - self.getCustomScore(self.lastState)
             self.observeTransition(self.lastState, self.lastAction, gameState, reward)
 
         return gameState
 
     def terminal(self, state):
-        deltaReward = state.getScore() - self.lastState.getScore()
-        self.observeTransition(self.lastState, self.lastAction, state, deltaReward)
+        #deltaReward = state.getScore() - self.lastState.getScore()
+        #self.observeTransition(self.lastState, self.lastAction, state, deltaReward)
         self.stopEpisode()
 
         # Make sure we have this var
@@ -573,6 +847,7 @@ class ApproximateQAgent(DummyAgent):
         if self.saveWeights:
             with open(self.savePath, 'wb') as f:
                 pickle.dump(self.weights, f, pickle.HIGHEST_PROTOCOL)
+                print "Saving weights %s" % self.weights
         if self.episodesSoFar == self.numTraining:
             print("episode equals numTraining, begin testing afterwards")
 
@@ -615,6 +890,47 @@ class DefensiveAgent(DummyAgent):
         myPos = myState.getPosition()
 
         features['defendFood'] = len(self.getFoodYouAreDefending(successor).asList())
+
+
+        for distribution in self.distributions:
+            # find the closest pig on our side of the map
+            if distribution in self.getFoodYouAreDefending(successor):
+                features['attackInvaders'] = 100
+                break;
+        
+
+
+        #TODO this doesnt really work needto sort for the closest position and move that way. 
+        #the that to need to move to that location would probs be best
+        bestGuessLocation = dict()
+        opponentIndex = [] 
+        if self.distributions:
+            for (opponent, positions) in self.distributions.items():
+                opponentIndex = opponentIndex +  [opponent]
+                opponentAgentPosition = gameState.getAgentState(opponent).getPosition()
+
+                nosieEnemieLocations = [pos for pos, _ in self.distributions[opponent].items()]  
+                nosieEnemieLocations.sort()    
+                features[opponent] =  self.getMazeDistance(myPos, nosieEnemieLocations[0])
+
+                #self.debugDraw(nosieEnemieLocation[0], [1,0,0], True)
+
+        #i = 0
+        #print opponentIndex
+        #for location in nosieEnemieLocations:
+        #    features[i] = self.getMazeDistance(myPos, bestGuessLocation[opponentIndex[i]])
+        #     i += 1
+
+        #print nosieEnemieLocations
+
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        features['numInvaders'] = len(invaders)
+        if len(invaders) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
+
+
+
 
         # Computes whether we're on defense (1) or offense (0)
         features['onDefense'] = 1
@@ -666,9 +982,12 @@ class DefensiveAgent(DummyAgent):
                             self.getMazeDistance(myPos, borderPos) for borderPos in borderPositions)
                         # print (-borderDistances * successor.getAgentState(self.index).numCarrying) / 100.0
                         features['boarderDistance'] = (borderDistances / 100.0)
+        #print features
 
         return features
 
     def getWeights(self, gameState, action):
-        return {'numInvaders': -1000, 'onDefense': 100, 'invaderDistance': -10, 'stop': -100, 'reverse': -2,
-                'boarderDistance': -2, 'defendFood': 10}
+
+
+        return {'numInvaders': -1000, 'onDefense': 20, 'invaderDistance': -10, 'stop': -10, 
+                'defendFood': 1, '1': -100, '3': -100, '2': -100, '4': -100, 'reverse': -2}
