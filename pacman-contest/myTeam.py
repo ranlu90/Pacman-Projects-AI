@@ -387,6 +387,18 @@ class ApproximateQAgent(DummyAgent):
         return path
 
     def chooseAction(self, gameState):
+        myPostion = gameState.getAgentPosition(self.index)
+        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+        ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+        if len(ghost) > 0:
+            dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
+            food = gameState.getAgentState(self.index).numCarrying
+
+            if min(dists) < 3 and food > 0:
+                self.escapeRoute = self.aStarSearch(gameState)
+                action = self.escapeRoute.pop(0)
+                print action
+                return action
 
         if not self.teamsRegistered:
             self.setInitialDistributions(gameState)
@@ -396,7 +408,7 @@ class ApproximateQAgent(DummyAgent):
 
         action = self.findOptimalAction(gameState)
 
-        #NOTE Might be better to let it learn during a game just don't save the new weights 
+        # Might be better to let it learn during a game just don't save the new weights
         if self.numTraining > 0:
             self.observation(gameState)
 
