@@ -266,7 +266,7 @@ class ApproximateQAgent(DummyAgent):
         if True:
             self.weights = {'enemyPacManDistance': -300.5177004950197802, 'scoredPoints': 17.392823999999997,
                             'distanceToFood': 1.0827753607280046, 'foodICanReturn': -14.0866415843544661,
-                            'ghostDistance': -100.19742345269455042, 'foodEaten': 6.2513475884878105, 'invaders': -10}
+                            'ghostDistance': -100.19742345269455042, 'foodEaten': 6.2513475884878105, 'invaders': -30, 'defenders': -30}
 
         self.lastState = None
         self.lastAction = None
@@ -390,7 +390,7 @@ class ApproximateQAgent(DummyAgent):
         myPostion = gameState.getAgentPosition(self.index)
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
-        if len(ghost) > 0:
+        if len(ghost) > 0 and False:
             dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
             food = gameState.getAgentState(self.index).numCarrying
 
@@ -495,7 +495,7 @@ class ApproximateQAgent(DummyAgent):
         # how long does it take for us to move and make sure we are always in range of making it home if we have food
 
         if prevGameState:
-            prevScore = self.getScore(successor)
+            prevScore = self.getScore(prevGameState)
             currentScore = self.getScore(state)
 
             # TODO test this to make sure its working
@@ -516,42 +516,40 @@ class ApproximateQAgent(DummyAgent):
         closestPacmanDistance = float('inf')
 
         if len(ghosts) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
-            closestGhostDistance = min(dists)
-
-            locationsOfGhosts = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
+            #locationsOfGhosts = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
             enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
             ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
+            closestGhostDistance = min(dists)
+            
             for ghost in ghosts:
-                if closestGhostDistance < 3 or self.getMazeDistance(myPos,
+                if closestGhostDistance < 3 or self.getMazeDistance(myPrevPos,
                                                                     ghost.getPosition()) == 1:  # or self.getMazeDistance(myPos, ghost.getPosition()) == 1:
                     if not ghost.scaredTimer:
                         # TODO rename to inKillZone
                         features['ghostDistance'] = 1
 
-                # no danger if im a ghost need to set ghostDistance to 1 as it gets inver
-                if closestGhostDistance > 1 and not currentAgentState.isPacman:
-                    features['ghostDistance'] = 1
+                if closestGhostDistance > 2 and not currentAgentState.isPacman and closestGhostDistance < 4:
+                    features['ghostDistance'] = -1
 
-                # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         # TODO issue eating food when close to ghost and runing away flips ghost value
         # Can kill pacman
 
         # TODO add a mechanism if enemy pacman two to the right stop and block by staying on the same horizontial
 
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        attackRange = 3 
         if len(enemyPacMan) > 0:
             dists = [self.getMazeDistance(myPrevPos, a.getPosition()) for a in enemyPacMan]
             closestPacmanDistance = min(dists)
+
             for pacman in enemyPacMan:
-                if myPos == pacman.getPosition() or closestPacmanDistance <= 4:
-                    features.clear()
+                if self.getMazeDistance(myPos, pacman.getPosition()) == 1 or closestPacmanDistance < attackRange:
 
-                    features['enemyPacManDistance'] = 1
-
-            if not currentAgentState.isPacman:
-                features['enemyPacManDistance'] = 1
-                # self.debugDraw(myPos, [1,0,0])
+                    features['enemyPacManDistance'] = 1 
 
         # TODO and if ghost is close its scarded we can still hunt food
         # also check we didnt die 
@@ -629,6 +627,7 @@ class ApproximateQAgent(DummyAgent):
             scared = sum([ghost.scaredTimer for ghost in ghosts]) / len(ghosts)
 
             if min(dists) < 2 and scared > 2:
+                print "ghost is scared" 
                 features['ghostDistance'] = -1  # * (min(dists) / 100.0)
 
         if len(enemyPacMan) > 0:
@@ -636,6 +635,7 @@ class ApproximateQAgent(DummyAgent):
 
             # TODO might want to run untill not scared anymore
             if min(dists) < 3 and state.getAgentState(self.index).scaredTimer > 2:
+                print "we are scared and near pacman" 
                 features['enemyPacManDistance'] = -1  # * (min(dists) / 100.0)
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -645,8 +645,6 @@ class ApproximateQAgent(DummyAgent):
 
         #        # Computes distance to invaders we can see
         #        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        #        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        #        features['numInvaders'] = len(invaders)
         #        if len(invaders) > 0:
         #            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
         #            #features['invaderDistance'] = min(dists)
@@ -691,12 +689,17 @@ class ApproximateQAgent(DummyAgent):
         # kill scared enemy ghost
         elif features['ghostDistance'] == -1:
             features.clear()
+            defenders = [a for a in enemies if not a.isPacman and a.getPosition() != None]
+            features['defenders'] = len(defenders)
             features['ghostDistance'] = -1
             return features
 
         # Kill enemy pacman
         elif features['enemyPacManDistance'] == 1:
             features.clear()
+
+            invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+            features['numInvaders'] = len(invaders)
             features['enemyPacManDistance'] = 1
             return features
 
