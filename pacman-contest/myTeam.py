@@ -782,7 +782,7 @@ class ApproximateQAgent(DummyAgent):
             #NOTE stop hunting for food and run away
             #once we stop going down dead ends can change this to keep hunting for food 
             features['foodEaten'] = -1 
-            features['distanceToFood'] = -1
+            features['distanceToFood'] = 0 
             features['foodICanReturn'] = temp
 
             features['ghostDistance'] = 1
@@ -832,7 +832,7 @@ class ApproximateQAgent(DummyAgent):
             ghostCanKill = features['ghostDistance']
             features.clear()
             features['foodEaten'] = -1 
-            features['distanceToFood'] = -1
+            features['distanceToFood'] = 0 
             features['foodICanReturn'] = temp
             features['ghostDistance'] = ghostCanKill 
             return features 
