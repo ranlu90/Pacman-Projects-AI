@@ -719,7 +719,7 @@ class ApproximateQAgent(DummyAgent):
             invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
             features['numInvaders'] = len(invaders)
             features['enemyPacManDistance'] = 5
-            print features
+            #print features
             return features
 
         # Score one for the home team ^_^
