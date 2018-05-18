@@ -541,7 +541,7 @@ class ApproximateQAgent(DummyAgent):
 
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        attackRange = 3 
+        attackRange = 4 
         if len(enemyPacMan) > 0:
             dists = [self.getMazeDistance(myPrevPos, a.getPosition()) for a in enemyPacMan]
             closestPacmanDistance = min(dists)
@@ -549,7 +549,11 @@ class ApproximateQAgent(DummyAgent):
             for pacman in enemyPacMan:
                 if self.getMazeDistance(myPos, pacman.getPosition()) == 1 or closestPacmanDistance < attackRange:
 
-                    features['enemyPacManDistance'] = 1 
+                    attack = []
+                    attack = range(1, attackRange + 1)
+                    attack.reverse
+                    print "!!!!!!!!!!!!!!!!!!!!!!"
+                    features['enemyPacManDistance'] = attack[closestPacmanDistance] 
 
         # TODO and if ghost is close its scarded we can still hunt food
         # also check we didnt die 
@@ -695,7 +699,7 @@ class ApproximateQAgent(DummyAgent):
             return features
 
         # Kill enemy pacman
-        elif features['enemyPacManDistance'] == 1:
+        elif features['enemyPacManDistance'] > 0:
             features.clear()
 
             invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
