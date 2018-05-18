@@ -262,7 +262,7 @@ class ApproximateQAgent(DummyAgent):
             with open(loadPath, 'rb') as f:
                 print("loading weights from " + os.path.realpath(f.name))
                 self.weights = pickle.load(f)
-                #print(self.weights)
+                print(self.weights)
         else:
             self.weights = util.Counter()
 
@@ -441,7 +441,7 @@ class ApproximateQAgent(DummyAgent):
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
         #print self.weights
-        #print features
+        print features
 
         return Counter(self.weights) * Counter(features)
 
@@ -616,7 +616,7 @@ class ApproximateQAgent(DummyAgent):
         # Can be killed by ghost
         
         # do not care about this if they are scarded
-        if len(ghosts) > 0:
+        if len(ghosts) > 0 :
             #TODO getting the closes dists from any agent instead of from me
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
             closestGhostDistance = min(dists)
@@ -632,6 +632,11 @@ class ApproximateQAgent(DummyAgent):
                         #TODO rename to inKillZone
                         features['ghostDistance'] = 1
 
+                    # no danger if im a ghost 
+                if closestGhostDistance > 1 and not currentAgentState.isPacman:
+                    features['ghostDistance'] = 0
+
+
 
 #TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 #TODO issue eating food when close to ghost and runing away flips ghost value
@@ -646,9 +651,12 @@ class ApproximateQAgent(DummyAgent):
             for pacman in enemyPacMan:
                 if myPos == pacman.getPosition() or closestPacmanDistance <= 4:  
                     features.clear()
-                    features['enemyPacManDistance'] = 1 
-                    return features
 
+                    features['enemyPacManDistance'] = 1 
+
+
+            if not currentAgentState.isPacman:
+                features['enemyPacManDistance'] = 0
                     #self.debugDraw(myPos, [1,0,0])
 
         #TODO and if ghost is close its scarded we can still hunt food
@@ -658,8 +666,6 @@ class ApproximateQAgent(DummyAgent):
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
             
             # If zero we are standing on food so ignore and look for next food
-            if minDistance == 0:
-                minDistance = float('inf')
             features['distanceToFood'] = -(minDistance / 100.0)
                                 
 
@@ -739,6 +745,7 @@ class ApproximateQAgent(DummyAgent):
 
             #TODO might want to run untill not scared anymore
             if min(dists) < 3 and state.getAgentState(self.index).scaredTimer > 2:
+
                 features['enemyPacManDistance'] = -1 #* (min(dists) / 100.0)
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -791,7 +798,6 @@ class ApproximateQAgent(DummyAgent):
             
             #NOTE stop hunting for food and run away
             #once we stop going down dead ends can change this to keep hunting for food 
-            features['foodEaten'] = -1 
             features['distanceToFood'] = 0 
             features['foodICanReturn'] = temp
 
@@ -834,7 +840,7 @@ class ApproximateQAgent(DummyAgent):
             features['distanceToFood'] = temp 
             features['foodEaten'] = 1
             return features
-
+#
         # Run home if ghost close to us and no tasty food close by
         #TODO change food left to greater then percentage?
 
@@ -843,7 +849,6 @@ class ApproximateQAgent(DummyAgent):
             temp = features['foodICanReturn']
             ghostCanKill = features['ghostDistance']
             features.clear()
-            features['distanceToFood'] = 0 
             features['foodICanReturn'] = temp
             features['ghostDistance'] = ghostCanKill 
             return features 
@@ -858,14 +863,19 @@ class ApproximateQAgent(DummyAgent):
 
         # Check if we got points for no reason, bug not to do with what we did
         # So ignore reward 
+        temp = features['distanceToFood']
         if self.red:
             if self.getCustomScore(state) > 0:
                 features.clear()
+                #TODO there are serioss bugs that are causing this to fire off
+                # temp fix by making sure ghost keeps hunting for food
+                features['distanceToFood'] = temp
                 return features
 
         else:
             if self.getCustomScore(state) < 0:
                 features.clear()
+                features['distanceToFood'] = temp
                 return features
 
         #TODO check if there is a ghost close enough to kill us before getting more food
@@ -1018,7 +1028,7 @@ class DefensiveAgent(DummyAgent):
         
 
 
-        #TODO this doesnt really work needto sort for the closest position and move that way. 
+        #TODO this doesntreally work needto sort for the closest position and move that way. 
         #the that to need to move to that location would probs be best
         #bestGuessLocation = dict()
         #opponentIndex = [] 
