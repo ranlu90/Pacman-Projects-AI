@@ -262,7 +262,7 @@ class ApproximateQAgent(DummyAgent):
             with open(loadPath, 'rb') as f:
                 print("loading weights from " + os.path.realpath(f.name))
                 self.weights = pickle.load(f)
-                print(self.weights)
+                #print(self.weights)
         else:
             self.weights = util.Counter()
 
@@ -441,7 +441,7 @@ class ApproximateQAgent(DummyAgent):
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
         #print self.weights
-        print features
+        #print features
 
         return Counter(self.weights) * Counter(features)
 
