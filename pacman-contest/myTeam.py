@@ -621,7 +621,7 @@ class ApproximateQAgent(DummyAgent):
             enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
             ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
             for ghost in ghosts:
-                if closestGhostDistance < 2 or self.getMazeDistance(myPos, ghost.getPosition()) == 1: #or self.getMazeDistance(myPos, ghost.getPosition()) == 1:
+                if closestGhostDistance < 3 or self.getMazeDistance(myPos, ghost.getPosition()) == 1: #or self.getMazeDistance(myPos, ghost.getPosition()) == 1:
                     if not ghost.scaredTimer:
                         #TODO rename to inKillZone
                         features['ghostDistance'] = 1
