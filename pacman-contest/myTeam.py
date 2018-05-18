@@ -372,7 +372,7 @@ class ApproximateQAgent(DummyAgent):
                                     abs(Actions.directionToVector(action)[1] + current[1])),
                                    action, cost) for action in actions}
                     for state in nextStates:
-                        enemies = [distribution.get(current) for distribution in self.distributions]
+                        enemies = [distribution.get(current) for (enemie, distribution) in self.distributions.items()]
                         enemies = list(filter(None.__ne__, enemies))
                         if not state in visited:
                             if not enemies:
