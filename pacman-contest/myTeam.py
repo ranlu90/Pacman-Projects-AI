@@ -324,7 +324,12 @@ class ApproximateQAgent(DummyAgent):
 
     def computeActionFromQValues(self, state):
         legal_actions = state.getLegalActions(self.index)
-        legal_actions.remove(Directions.STOP)
+
+        # dirty hack to make sure it doesnt stand still on food
+        myPos  = state.getAgentState(self.index).getPosition()
+        prevGameState = self.getPreviousObservation()
+        if prevGameState and self.getFood(prevGameState)[int(myPos[0])][int(myPos[1])]:#and myPos!= teamMatePosition:
+            legal_actions.remove(Directions.STOP)
 
         random.shuffle(legal_actions)
 
@@ -436,7 +441,7 @@ class ApproximateQAgent(DummyAgent):
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
         #print self.weights
-        #print features
+        print features
 
         return Counter(self.weights) * Counter(features)
 
@@ -478,12 +483,12 @@ class ApproximateQAgent(DummyAgent):
         # Am I standing where food used to be
         #TODO and is not our food we are defending
         pickedUpFood = 1 if self.getFood(prevGameState)[myPostion[0]][myPostion[1]] and myPostion != teamMatePosition else 0
+
         #if pickedUpFood:
         #    self.debugDraw(myPostion, [1,0,0])
         #    print pickedUpFood
 
 
-        #Need to fix this
         enemies = [currentGameState.getAgentState(i) for i in self.getOpponents(currentGameState)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
         enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
@@ -499,6 +504,7 @@ class ApproximateQAgent(DummyAgent):
             closestGhostDistance = min(dists)
             if min(dists) < 2:
                 inKillZone = -3 
+                pickedUpFood = -1
                 #nearGhost = -2
                 #inKillZone = -5 if self.getMazeDistance(prevGameState.getAgentPosition(self.index), ghost[0].getPosition()) <= 4 else 0
         
@@ -647,9 +653,13 @@ class ApproximateQAgent(DummyAgent):
 
         #TODO and if ghost is close its scarded we can still hunt food
         # also check we didnt die 
-        if len(foodList) > 0 and features['foodEaten'] == 0 and not features['ghostDistance'] == 1:  
+        if len(foodList) > 0 and not features['ghostDistance'] == 1:  
             # myPos = successor.getAgentState(self.index).getPosition()
             minDistance = min([self.getMazeDistance(myPos, food) for food in foodList])
+            
+            # If zero we are standing on food so ignore and look for next food
+            if minDistance == 0:
+                minDistance = float('inf')
             features['distanceToFood'] = -(minDistance / 100.0)
                                 
 
@@ -819,19 +829,20 @@ class ApproximateQAgent(DummyAgent):
 
         # Num num eat some tasy food stuffs
         elif features['foodEaten'] == 1:
+            temp = features['foodICanReturn']
             features.clear()
+            features['distanceToFood'] = temp 
             features['foodEaten'] = 1
             return features
 
         # Run home if ghost close to us and no tasty food close by
         #TODO change food left to greater then percentage?
 
-        elif closestGhostDistance < 4 or (successorAgentState.numCarrying > 5 and  features['distanceToFood'] < -0.03):
+        elif closestGhostDistance < 4 or (successorAgentState.numCarrying > 5 and  features['distanceToFood'] < -0.03) or foodLeft < 3:
             
             temp = features['foodICanReturn']
             ghostCanKill = features['ghostDistance']
             features.clear()
-            features['foodEaten'] = -1 
             features['distanceToFood'] = 0 
             features['foodICanReturn'] = temp
             features['ghostDistance'] = ghostCanKill 
