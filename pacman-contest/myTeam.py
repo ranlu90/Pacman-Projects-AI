@@ -18,7 +18,7 @@ from game import Directions, Actions, Configuration
 import game
 import os
 import pickle
-from util import nearestPoint, Counter
+from util import nearestPoint, Counter, manhattanDistance
 
 
 #################
@@ -353,6 +353,62 @@ class ApproximateQAgent(DummyAgent):
         action = self.computeActionFromQValues(gameState)
 
         return random.choice(legalActions) if random_action else action
+
+    # find the path to the closet border if we are close to ghost and have food in carriage
+    def aStarSearch(self, gameState):
+        frontier = util.PriorityQueue()  # A Priority Queue with node and priority
+        explored = list()  # A dictionary of all visited nodes
+        initialPosition = gameState.getAgentState(self.index).getPosition()
+        actions = list()  # A list of actions from start to end
+        goal = initialPosition
+        # Choose the closet border depending on our team
+        grid = gameState.getWalls()
+        if self.red:
+            borderX = grid.width / 2 - 1
+            borderPositions = [(borderX, y) for y in range(self.getFood(gameState).height) if
+                               not gameState.hasWall(borderX, y)]
+        else:
+            borderX = grid.width / 2
+            borderPositions = [(borderX, y) for y in range(self.getFood(gameState).height) if
+                               not gameState.hasWall(borderX, y)]
+
+        minDistance = float('inf')
+        for closetBorder in borderPositions:
+            if manhattanDistance(initialPosition, closetBorder) < minDistance:
+                minDistance = manhattanDistance(initialPosition, closetBorder)
+                goal = closetBorder
+
+        initialNode = {'parent': None, 'action': None, 'child': initialPosition, 'cost': 0,
+                       'heuristic': manhattanDistance(initialPosition, goal)}
+        frontier.push(initialNode, 0 + initialNode["heuristic"])
+
+        while not frontier.isEmpty():
+
+            parentNode = frontier.pop()
+            parentPosition = parentNode["child"]
+
+            if parentPosition in explored:
+                continue
+            explored.append(parentPosition)
+            if parentPosition == goal:
+                break
+
+            for action in gameState.getLegalActions(self.index):
+                successor = self.getSuccessor(gameState, action).getAgentPosition(self.index)
+                cost = 1
+                # print successor
+                if successor not in explored:
+                    node = {'parent': parentNode, 'action': action, 'child': successor, 'cost': 0, 'heuristic': 0}
+                    node["cost"] = cost + parentNode["cost"]
+                    node["heuristic"] = manhattanDistance(node["child"], goal)
+                    frontier.push(node, node["cost"] + node["heuristic"])
+                    print node["cost"] + node["heuristic"]
+
+        while parentNode["action"] is not None:
+            actions.insert(0, parentNode["action"])  # Add actions in reverse order
+            parentNode = parentNode["parent"]  # Trace back to the parent position
+
+        return actions
 
     def chooseAction(self, gameState):
 
