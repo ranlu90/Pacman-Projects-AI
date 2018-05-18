@@ -634,7 +634,7 @@ class ApproximateQAgent(DummyAgent):
 
                     # no danger if im a ghost 
                 if closestGhostDistance > 1 and not currentAgentState.isPacman:
-                    features['ghostDistance'] = 0
+                    features['ghostDistance'] = 1 
 
 
 
@@ -656,7 +656,7 @@ class ApproximateQAgent(DummyAgent):
 
 
             if not currentAgentState.isPacman:
-                features['enemyPacManDistance'] = 0
+                features['enemyPacManDistance'] = 1 
                     #self.debugDraw(myPos, [1,0,0])
 
         #TODO and if ghost is close its scarded we can still hunt food
