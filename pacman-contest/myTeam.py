@@ -565,7 +565,7 @@ class ApproximateQAgent(DummyAgent):
             enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
             ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
             for ghost in ghosts:
-                if closestGhostDistance <= 2 or self.getMazeDistance(myPos, ghost.getPosition()) == 1: #or self.getMazeDistance(myPos, ghost.getPosition()) == 1:
+                if closestGhostDistance < 2 or self.getMazeDistance(myPos, ghost.getPosition()) == 1: #or self.getMazeDistance(myPos, ghost.getPosition()) == 1:
                     if not ghost.scaredTimer:
                         #TODO rename to inKillZone
                         features['ghostDistance'] = 1
@@ -677,8 +677,8 @@ class ApproximateQAgent(DummyAgent):
         #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         #if action == Directions.STOP: features['stop'] = 1
-        rev = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
-        if action == rev: features['reverse'] = 1
+        #rev = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
+        #if action == rev: features['reverse'] = 1
 
 
 
@@ -773,8 +773,12 @@ class ApproximateQAgent(DummyAgent):
         elif closestGhostDistance < 4 or (successorAgentState.numCarrying > 5 and  features['distanceToFood'] < -0.03):
             
             temp = features['foodICanReturn']
+            ghostCanKill = features['ghostDistance']
             features.clear()
+            features['foodEaten'] = -1 
+            features['distanceToFood'] = -1
             features['foodICanReturn'] = temp
+            features['ghostDistance'] = ghostCanKill 
             return features 
         
 
