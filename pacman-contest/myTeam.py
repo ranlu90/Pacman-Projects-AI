@@ -139,14 +139,12 @@ class DummyAgent(CaptureAgent):
         opponents = self.getOpponents(gameState)
 
         # set initial position
-
         teamIndex = self.getTeam(gameState)
         self.teamsInitialPosition[teamIndex[0]] = gameState.getAgentState(teamIndex[0]).getPosition()
         self.teamsInitialPosition[teamIndex[1]] = gameState.getAgentState(teamIndex[1]).getPosition()
 
         i = 0
         for (agent, position) in self.teamsInitialPosition.items():
-            # For one opponent's distribution
             enemieStart = (wallPos.width - position[0] - 1,
                            wallPos.height - position[1] - 1)
 
@@ -157,11 +155,10 @@ class DummyAgent(CaptureAgent):
 
         self.updateEnemyDistributions(gameState)
 
-        if not self.distributions[opponents[0]]:  # [self.enemiesStartingPos[1]]:
-            # reverse positions asigned to each agent
+        # reverse positions asigned to each agent
+        if not self.distributions[opponents[0]]:
             i = 0
             for (agent, position) in self.teamsInitialPosition.items():
-                # For one opponent's distribution
                 enemieStart = (wallPos.width - position[0] - 1,
                                position[1])
 
@@ -191,15 +188,14 @@ class DummyAgent(CaptureAgent):
 
                         noise_distance = self.getCurrentObservation().getAgentDistances()[opponent]
 
-                        # distance is 7 as we need to include thier next move taking them outside of our ping area
-                        max_distance = noise_distance + 7
-                        min_distance = noise_distance - 7
+                        # distance is 8 as we need to include their next move taking them outside of our ping area
+                        max_distance = noise_distance + 8
+                        min_distance = noise_distance - 8
 
                         myPos = gameState.getAgentState(self.index).getPosition()
                         distance = util.manhattanDistance(myPos, new_position)
 
                         # Check possible locations that fit inside the noise reading minus the area we can see
-                        # add the visula range of my team mate as well
                         if distance >= min_distance and distance <= max_distance and distance > 4:
                             self.distributions[opponent][new_position] = 1
                         else:
@@ -271,15 +267,6 @@ class ApproximateQAgent(DummyAgent):
                             'distanceToFood': 1.0827753607280046, 'foodICanReturn': -14.0866415843544661,
                             'ghostDistance': -100.19742345269455042, 'foodEaten': 6.2513475884878105, 'invaders': -10}
 
-        #
-        #
-        #            self.weights = {'reverse': -3.1193152508543696, 'stop': -0.02860773042212779,
-        #                            'enemyPacManDistance': -0.19993697043215167,
-        #                            'scoredPoints': 20.988673473991977, 'distanceToFood': 7.6040656773252039,
-        #                            'foodICanReturn': 4.650475210934178,
-        #                            'foodLeft': 1.8896938596362576, 'ghostDistance': 2.422286242755341,
-        #                            'foodEaten': 0.43581990540752097, 'distanceToEnemyPacMan': -100}
-        #
         self.lastState = None
         self.lastAction = None
         self.episodeRewards = 0.0
@@ -288,7 +275,6 @@ class ApproximateQAgent(DummyAgent):
         """
         Finds the next successor which is a grid position (location tuple).
         """
-
         successor = gameState.generateSuccessor(self.index, action)
         pos = successor.getAgentState(self.index).getPosition()
         if pos != nearestPoint(pos):
@@ -323,7 +309,7 @@ class ApproximateQAgent(DummyAgent):
     def computeActionFromQValues(self, state):
         legal_actions = state.getLegalActions(self.index)
 
-        # dirty hack to make sure it doesnt stand still on food
+        # Dirty hack to make sure it doesnt stand still on food
         myPos = state.getAgentState(self.index).getPosition()
         prevGameState = self.getPreviousObservation()
         if prevGameState and self.getFood(prevGameState)[int(myPos[0])][int(myPos[1])]:  # and myPos!= teamMatePosition:
@@ -334,7 +320,6 @@ class ApproximateQAgent(DummyAgent):
         successor_q_values = {action: self.getQValue(state, action) for action in legal_actions}
         max_action = max(successor_q_values.iterkeys(), key=(lambda key: successor_q_values[key]))
 
-        # print "successor_q_values", successor_q_values
         return max_action if legal_actions else None
 
     def computeValueFromQValues(self, gameState):
@@ -343,7 +328,6 @@ class ApproximateQAgent(DummyAgent):
         return max(successor_q_values) if legal_actions else 0.0
 
     def findOptimalAction(self, gameState):
-        # Pick Action
 
         legalActions = gameState.getLegalActions(self.index)
 
@@ -423,7 +407,7 @@ class ApproximateQAgent(DummyAgent):
 
         action = self.findOptimalAction(gameState)
 
-        # Might be better to let it learn during a game just don't save the new weights 
+        #NOTE Might be better to let it learn during a game just don't save the new weights 
         if self.numTraining > 0:
             self.observation(gameState)
 
@@ -438,23 +422,13 @@ class ApproximateQAgent(DummyAgent):
 
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
-        # print self.weights
         print features
 
         return Counter(self.weights) * Counter(features)
 
-    # TODO this can be better
-
     def getCustomScore(self, currentGameState):
 
-        # foodRemaining = len(self.getFood(state).asList())
-        # defend = len(self.getFoodYouAreDefending(state).asList())
-        # timeLeft = currentGameState.data.timeleft / 100.0
-
-        # TODO scoring should only relate to the agent who is scoreing
         prevGameState = self.getPreviousObservation()
-
-        # Game just started
         if prevGameState == None:
             return 0
 
@@ -463,12 +437,11 @@ class ApproximateQAgent(DummyAgent):
         teamIndexs = self.getTeam(currentGameState)
         teamIndexs.remove(self.index)
         teamMateIndex = teamIndexs[0]
-        # teamMateState = currentGameState.getAgentState(iteamMateIndex)
 
         myPostion = currentGameState.getAgentPosition(self.index)
         teamMatePosition = currentGameState.getAgentPosition(teamMateIndex)
 
-        # TODO fix we are getting negitive points for scoreing swap around
+        # TODO test this is working  
         score = 0
         if self.red:
             if myAgentState.numCarrying == 0 and prevGameState.getAgentState(self.index).numCarrying > 0:
@@ -477,78 +450,31 @@ class ApproximateQAgent(DummyAgent):
             if myAgentState.numCarrying == 0 and prevGameState.getAgentState(self.index).numCarrying > 0:
                 score = self.getScore(self.getPreviousObservation()) - self.getScore(currentGameState)
 
-        # Am I standing where food used to be
-        # TODO and is not our food we are defending
         pickedUpFood = 1 if self.getFood(prevGameState)[myPostion[0]][
                                 myPostion[1]] and myPostion != teamMatePosition else 0
-
-        # if pickedUpFood:
-        #    self.debugDraw(myPostion, [1,0,0])
-        #    print pickedUpFood
 
         enemies = [currentGameState.getAgentState(i) for i in self.getOpponents(currentGameState)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
         enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        # if len(ghost) > 0:
-        #     dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghost]
 
         inKillZone = 0
         nearGhost = 0
-        closestGhostDistance = 999
         if len(ghost) > 0:
             dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
             closestGhostDistance = min(dists)
             if min(dists) < 2:
                 inKillZone = -3
                 pickedUpFood = -1
-                # nearGhost = -2
-                # inKillZone = -5 if self.getMazeDistance(prevGameState.getAgentPosition(self.index), ghost[0].getPosition()) <= 4 else 0
-
-        # TODO is there an enemy one away from me, im about to die
-        died = 0
-        # if util.manhattanDistance(myAgentState.getPosition(), prevGameState.getAgentState(self.index).getPosition()) > 1:
-
-        # not garnted to die but assume playing against a good agent in which I will be dead
-
-        # if closestGhostDistance == 1:
-        #    died = -1
-        # self.debugDraw(myAgentState.getPosition(), [1,0,0])
 
         # TODO add punshiment for succidding into a ghost
 
-        # TODO maybe add reward for killing pacman?
-        # change this to ghost 1 move away from me
-        # ghostInVision = -len(ghost)
-        #        win = 0
-        #        if currentGameState.isOver():
-        #            print "GAM OVER"
-        #        /
-        #            redCount = 0
-        #            blueCount = 0
-        #            for index in range(state.getNumAgents()):
-        #                agentState = state.data.agentStates[index]
-        #                if index in state.getRedTeamIndices():
-        #                    redCount += agentState.numReturned
-        #                else:
-        #                    blueCount += agentState.numReturned
-        #
-        #            if self.red and redCount > blueCount:
-        #                win = 1
-        #            else:
-        #                win - 1
-        #
-        # TODO check what win is doing
-        customScore = 10 * score + pickedUpFood + inKillZone + nearGhost  # + died
-
-        # print "score"
-        # print customScore
+        customScore = 10 * score + pickedUpFood + inKillZone
 
         return customScore
 
     def getFeatures(self, state, action):
         features = util.Counter()
 
-        # TODO repeated vars in getFeatures and customScore
         successor = self.getSuccessor(state, action)
         currentAgentState = state.getAgentState(self.index)
         successorAgentState = successor.getAgentState(self.index)
@@ -567,24 +493,11 @@ class ApproximateQAgent(DummyAgent):
         # TODO if time left is less then some number run for home
         # how long does it take for us to move and make sure we are always in range of making it home if we have food
 
-        # TODO add features distance too food distance to ghost and the difrance between thoes numbers
-
-        # TODO don't think this is working
-        # We died
-        #   if util.manhattanDistance(currentAgentState.getPosition(), successorAgentState.getPosition()) > 1:
-        #       features.clear()
-        #       features['died'] = 1
-        #       self.debugDraw(state.getAgentState(self.index).getPosition(), [0,1,0])
-        #       return features
-
-        # TODO fix the pacman get points for before killing him not when killed him
-        # remove returning food
         if prevGameState:
             prevScore = self.getScore(successor)
             currentScore = self.getScore(state)
 
             # TODO test this to make sure its working
-            # should change this so that you only get points when you score and not your team mate
             if self.red:
                 if prevScore - currentScore > 0:
                     features['scoredPoints'] = 1
@@ -592,28 +505,18 @@ class ApproximateQAgent(DummyAgent):
                 if currentScore - prevScore < 0:
                     features['scoredPoints'] = 1
 
-                    # pickedUpFood = 1 if self.getFood(prevGameState)[myPostion[0]][myPostion[1]] and myPostion != teamMatePosition else 0
             features['foodEaten'] = 1 if self.getFood(prevGameState)[int(myPos[0])][
                                              int(myPos[1])] and myPos != teamMatePosition else 0
-
-            # food I can return los points when i die
-        # when I die ghost distance gets bonuns points
-        # when moving away from pacman and away from food lose points 
 
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
 
         closestGhostDistance = float('inf')
         closestPacmanDistance = float('inf')
-        # Can be killed by ghost
 
-        # do not care about this if they are scarded
         if len(ghosts) > 0:
-            # TODO getting the closes dists from any agent instead of from me
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
             closestGhostDistance = min(dists)
-            # print closestGhostDistance
-            # print self.index
 
             locationsOfGhosts = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
             enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
@@ -625,7 +528,7 @@ class ApproximateQAgent(DummyAgent):
                         # TODO rename to inKillZone
                         features['ghostDistance'] = 1
 
-                    # no danger if im a ghost 
+                # no danger if im a ghost need to set ghostDistance to 1 as it gets inver
                 if closestGhostDistance > 1 and not currentAgentState.isPacman:
                     features['ghostDistance'] = 1
 
