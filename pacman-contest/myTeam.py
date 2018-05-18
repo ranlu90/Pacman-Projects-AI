@@ -16,6 +16,8 @@ from captureAgents import CaptureAgent
 import random, time, util
 from game import Directions, Actions, Configuration
 import game
+from collections import defaultdict
+import operator
 import os
 import heapq
 import pickle
@@ -373,7 +375,7 @@ class ApproximateQAgent(DummyAgent):
                                    action, cost) for action in actions}
                     for state in nextStates:
                         enemies = [distribution.get(current) for (enemie, distribution) in self.distributions.items()]
-                        enemies = list(filter(None.__ne__, enemies))
+                        enemies = [x for x in enemies if x is not None]
                         if not state in visited:
                             if not enemies:
                                 additional_cost = min([manhattanDistance(current, g) for g in goal]) + 50
@@ -423,7 +425,6 @@ class ApproximateQAgent(DummyAgent):
 
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
-        print features
 
         return Counter(self.weights) * Counter(features)
 
@@ -467,7 +468,7 @@ class ApproximateQAgent(DummyAgent):
                 inKillZone = -3
                 pickedUpFood = -1
 
-        # TODO add punshiment for succidding into a ghost
+        # TODO add punishment for suiciding into a ghost
 
         customScore = 10 * score + pickedUpFood + inKillZone
 
@@ -892,13 +893,13 @@ class DefensiveAgent(DummyAgent):
         features = util.Counter()
         successor = self.getSuccessor(gameState, action)
 
-        agentDistances = gameState.getAgentDistances()
-
         # TODO I think distances are in order index 0, 1, 2, 3
 
-        # self.debugDraw((agentDistances[0], ), [1,0,0])
         myState = successor.getAgentState(self.index)
         myPos = myState.getPosition()
+
+        grid = gameState.getWalls()
+        halfway = grid.width / 2
 
         features['defendFood'] = len(self.getFoodYouAreDefending(successor).asList())
 
@@ -906,9 +907,9 @@ class DefensiveAgent(DummyAgent):
             # find the closest pig on our side of the map
             if distribution in self.getFoodYouAreDefending(successor):
                 features['attackInvaders'] = 100
-                break;
+                break
 
-        # TODO this doesntreally work needto sort for the closest position and move that way.
+        # TODO this doesn't really work need to sort for the closest position and move that way.
         # the that to need to move to that location would probs be best
         # bestGuessLocation = dict()
         # opponentIndex = []
@@ -916,62 +917,34 @@ class DefensiveAgent(DummyAgent):
         #    for (opponent, positions) in self.distributions.items():
         #        opponentIndex = opponentIndex +  [opponent]
         #        opponentAgentPosition = gameState.getAgentState(opponent).getPosition()
-
-        #        nosieEnemieLocations = [pos for pos, _ in self.distributions[opponent].items()]  
+        #        nosieEnemieLocations = [pos for pos, _ in self.distributions[opponent].items()]
         #        nosieEnemieLocations.sort()    
         #        features[opponent] =  self.getMazeDistance(myPos, nosieEnemieLocations[0])
-
         #        #self.debugDraw(nosieEnemieLocation[0], [1,0,0], True)
-
         # i = 0
         # print opponentIndex
         # for location in nosieEnemieLocations:
         #    features[i] = self.getMazeDistance(myPos, bestGuessLocation[opponentIndex[i]])
         #     i += 1
-
         # print nosieEnemieLocations
 
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
         features['numInvaders'] = len(invaders)
-        if len(invaders) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
 
         # Computes whether we're on defense (1) or offense (0)
-        features['onDefense'] = 1
-        if myState.isPacman: features['onDefense'] = 0
-
-        # Computes distance to invaders we can see
-        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        features['numInvaders'] = len(invaders)
-        if len(invaders) > 0:
-            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
-            features['invaderDistance'] = min(dists)
+        features['onDefense'] = 0 if myState.isPacman else 1
 
         if action == Directions.STOP: features['stop'] = 1
         rev = Directions.REVERSE[gameState.getAgentState(self.index).configuration.direction]
         if action == rev: features['reverse'] = 1
 
-        ## go on the attack
-        # print features['numInvaders']
-        # if features['numInvaders'] == 0 :
-        #     successor = self.getSuccessor(gameState, action)
-        #     foodList = self.getFood(successor).asList()
-        #     features['successorScore'] = -len(foodList)  # self.getScore(successor)
-        #
-        #     # Compute distance to the nearest food
-        #
-        #     if len(foodList) > 0:  # This should always be True,  but better safe than sorry
-        #         myPos = successor.getAgentState(self.index).getPosition()
-        #         minDistance = -min([self.getMazeDistance(myPos, food) for food in foodList])
-        #         features['distanceToFood'] = minDistance
-        #
-        #
-        # else:
+        # Computes distance to invaders we can see
+        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
+        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        features['numInvaders'] = len(invaders)
+
         if not myState.isPacman and features['numInvaders'] == 0:
-            grid = gameState.getWalls()
-            halfway = grid.width / 2
             borderPositions = [(halfway, y) for y in range(self.getFood(gameState).height) if
                                not gameState.hasWall(halfway, y)]
 
@@ -988,6 +961,21 @@ class DefensiveAgent(DummyAgent):
                         # print (-borderDistances * successor.getAgentState(self.index).numCarrying) / 100.0
                         features['boarderDistance'] = (borderDistances / 100.0)
 
+        if len(invaders) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
+            features['invaderDistance'] = min(dists)
+            features['boarderDistance'] = 0
+
+        elif self.distributions:
+            positions = [distribution.keys() for (enemie, distribution) in self.distributions.items()]
+            positions = positions[0] + positions[1]
+            positions = [(abs(position[0] - halfway), position[1]) for position in positions]
+            entryDict = defaultdict(float)
+            for (x, y) in positions:
+                entryDict[y] += 1.0 / x if x != 0 else 0.0
+            features['estimatedEntryPoint'] = abs(
+                myPos[1] - max(entryDict.iteritems(), key=operator.itemgetter(1))[0])
+
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         #
         #        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
@@ -995,7 +983,7 @@ class DefensiveAgent(DummyAgent):
         #        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
         #
         #
-        #        #TODO only try to kill the enemy ghost if it has 2 or less turns of beging scared
+        #        #TODO only try to kill the enemy ghost if it has 2 or less turns of being scared
         #        #TODO Scared stuff doesnt seem to work
         #        if len(ghosts) > 0:
         #            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
@@ -1021,6 +1009,7 @@ class DefensiveAgent(DummyAgent):
         return {'numInvaders': -1000, 'onDefense': 20, 'invaderDistance': -10, 'stop': -10,
                 'defendFood': 1, 'reverse': -2, 'boarderDistance': -2}
 
+
 class PriorityQueue:
     """
       Implements a priority queue data structure. Each inserted item
@@ -1028,7 +1017,8 @@ class PriorityQueue:
       in quick retrieval of the lowest-priority item in the queue. This
       data structure allows O(1) access to the lowest-priority item.
     """
-    def  __init__(self):
+
+    def __init__(self):
         self.heap = []
         self.count = 0
 
