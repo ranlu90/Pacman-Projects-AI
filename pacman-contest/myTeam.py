@@ -388,14 +388,19 @@ class ApproximateQAgent(DummyAgent):
                                     abs(Actions.directionToVector(action)[1] + current[1])),
                                    action, cost) for action in actions}
                     for state in nextStates:
+                        enemies = [distribution.get(current) for distribution in self.distributions]
+                        enemies = list(filter(None.__ne__, enemies))
                         if not state in visited:
-                            additional_cost = min([manhattanDistance(current, g) for g in goal])
+                            if not enemies:
+                                additional_cost = min([manhattanDistance(current, g) for g in goal]) + 50
+                            else:
+                                additional_cost = min([manhattanDistance(current, g) for g in goal])
                             new_cost = cost + state[2]
                             agenda.update((state[0], path + [state[1]], new_cost), new_cost + additional_cost)
             else:
                 continue
 
-        return []
+        return path
 
     def chooseAction(self, gameState):
 
