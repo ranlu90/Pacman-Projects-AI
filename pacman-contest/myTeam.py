@@ -17,6 +17,7 @@ import random, time, util
 from game import Directions, Actions, Configuration
 import game
 import os
+import heapq
 import pickle
 from util import nearestPoint, Counter, manhattanDistance
 
@@ -343,59 +344,42 @@ class ApproximateQAgent(DummyAgent):
 
     # find the path to the closet border if we are close to ghost and have food in carriage
     def aStarSearch(self, gameState):
-        frontier = util.PriorityQueue()  # A Priority Queue with node and priority
-        explored = list()  # A dictionary of all visited nodes
+        visited = list()
         initialPosition = gameState.getAgentState(self.index).getPosition()
-        actions = list()  # A list of actions from start to end
-        goal = initialPosition
-        # Choose the closet border depending on our team
+
         grid = gameState.getWalls()
+        borderX = grid.width / 2
+
         if self.red:
-            borderX = grid.width / 2 - 1
-            borderPositions = [(borderX, y) for y in range(self.getFood(gameState).height) if
-                               not gameState.hasWall(borderX, y)]
-        else:
-            borderX = grid.width / 2
-            borderPositions = [(borderX, y) for y in range(self.getFood(gameState).height) if
-                               not gameState.hasWall(borderX, y)]
+            borderX -= 1
 
-        minDistance = float('inf')
-        for closetBorder in borderPositions:
-            if manhattanDistance(initialPosition, closetBorder) < minDistance:
-                minDistance = manhattanDistance(initialPosition, closetBorder)
-                goal = closetBorder
+        goal = [(borderX, y) for y in range(self.getFood(gameState).height) if
+                not gameState.hasWall(borderX, y)]
 
-        initialNode = {'parent': None, 'action': None, 'child': initialPosition, 'cost': 0,
-                       'heuristic': manhattanDistance(initialPosition, goal)}
-        frontier.push(initialNode, 0 + initialNode["heuristic"])
+        agenda = PriorityQueue()
+        agenda.push((initialPosition, [], 0), 0)
 
-        while not frontier.isEmpty():
-
-            parentNode = frontier.pop()
-            parentPosition = parentNode["child"]
-
-            if parentPosition in explored:
+        while not agenda.isEmpty():
+            current, path, cost = agenda.pop()
+            if not current in visited:
+                visited.append(current)
+                if current in goal:
+                    return path
+                else:
+                    config = Configuration(current, Directions.STOP)
+                    actions = Actions.getPossibleActions(config, self.walls)
+                    nextStates = {((abs(Actions.directionToVector(action)[0] + current[0]),
+                                    abs(Actions.directionToVector(action)[1] + current[1])),
+                                   action, cost) for action in actions}
+                    for state in nextStates:
+                        if not state in visited:
+                            additional_cost = min([manhattanDistance(current, g) for g in goal])
+                            new_cost = cost + state[2]
+                            agenda.update((state[0], path + [state[1]], new_cost), new_cost + additional_cost)
+            else:
                 continue
-            explored.append(parentPosition)
-            if parentPosition == goal:
-                break
 
-            for action in gameState.getLegalActions(self.index):
-                successor = self.getSuccessor(gameState, action).getAgentPosition(self.index)
-                cost = 1
-                # print successor
-                if successor not in explored:
-                    node = {'parent': parentNode, 'action': action, 'child': successor, 'cost': 0, 'heuristic': 0}
-                    node["cost"] = cost + parentNode["cost"]
-                    node["heuristic"] = manhattanDistance(node["child"], goal)
-                    frontier.push(node, node["cost"] + node["heuristic"])
-                    print node["cost"] + node["heuristic"]
-
-        while parentNode["action"] is not None:
-            actions.insert(0, parentNode["action"])  # Add actions in reverse order
-            parentNode = parentNode["parent"]  # Trace back to the parent position
-
-        return actions
+        return []
 
     def chooseAction(self, gameState):
 
@@ -1019,3 +1003,41 @@ class DefensiveAgent(DummyAgent):
 
         return {'numInvaders': -1000, 'onDefense': 20, 'invaderDistance': -10, 'stop': -10,
                 'defendFood': 1, 'reverse': -2, 'boarderDistance': -2}
+
+class PriorityQueue:
+    """
+      Implements a priority queue data structure. Each inserted item
+      has a priority associated with it and the client is usually interested
+      in quick retrieval of the lowest-priority item in the queue. This
+      data structure allows O(1) access to the lowest-priority item.
+    """
+    def  __init__(self):
+        self.heap = []
+        self.count = 0
+
+    def push(self, item, priority):
+        entry = (priority, self.count, item)
+        heapq.heappush(self.heap, entry)
+        self.count += 1
+
+    def pop(self):
+        (_, _, item) = heapq.heappop(self.heap)
+        return item
+
+    def isEmpty(self):
+        return len(self.heap) == 0
+
+    def update(self, item, priority):
+        # If item already in priority queue with higher priority, update its priority and rebuild the heap.
+        # If item already in priority queue with equal or lower priority, do nothing.
+        # If item not in priority queue, do the same thing as self.push.
+        for index, (p, c, i) in enumerate(self.heap):
+            if i == item:
+                if p <= priority:
+                    break
+                del self.heap[index]
+                self.heap.append((priority, c, item))
+                heapq.heapify(self.heap)
+                break
+        else:
+            self.push(item, priority)
