@@ -530,8 +530,8 @@ class ApproximateQAgent(DummyAgent):
                         # TODO rename to inKillZone
                         features['ghostDistance'] = 1
 
-                if not currentAgentState.isPacman and closestGhostDistance > 3:
-                    features['ghostDistance'] = -1
+                if not currentAgentState.isPacman and closestGhostDistance < 2:
+                    features['ghostDistance'] = 1
                 
 
         # TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -752,12 +752,14 @@ class ApproximateQAgent(DummyAgent):
 
         elif closestGhostDistance < 4  and not scaredEnemyGhost or (
                 successorAgentState.numCarrying > 5 and features['distanceToFood'] < -0.03) or foodLeft < 3:
+            print "test"
 
             temp = features['foodICanReturn']
             ghostCanKill = features['ghostDistance']
             features.clear()
             features['foodICanReturn'] = temp
-            features['ghostDistance'] = ghostCanKill
+            features['ghostDistance'] = -1 
+            print features 
             return features
 
             # TODO add we died feature??
