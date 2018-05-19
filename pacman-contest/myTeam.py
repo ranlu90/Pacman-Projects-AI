@@ -437,10 +437,11 @@ class ApproximateQAgent(DummyAgent):
                                     abs(Actions.directionToVector(action)[1] + current[1])),
                                    action, cost) for action in actions}
                     for state in nextStates:
-                        enemies = [distribution.get(current) for (enemie, distribution) in self.distributions.items()]
-                        enemies = [x for x in enemies if x is not None]
+                        enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
+                        ghosts = [a.getPosition() for a in enemies if not a.isPacman and a.getPosition() != None]
+                        nogo = [(position + action for (k, action) in Actions._directions) for position in ghosts]
                         if not state in visited:
-                            if enemies:
+                            if current in nogo:
                                 continue
                             elif current in self.getFood(gameState).asList():
                                 additional_cost = min([manhattanDistance(current, g) for g in goal]) - 50
