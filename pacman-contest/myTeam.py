@@ -475,6 +475,23 @@ class ApproximateQAgent(DummyAgent):
 
         action = self.findOptimalAction(gameState)
 
+        # For dead end implementation
+        deadEndDistances = self.getDeadEndDistance()
+        if len(ghost) > 0:
+            successor = gameState.generateSuccessor(self.index, action)
+            myNextPos = successor.getAgentState(self.index).getPosition()
+
+            for opponent in self.getOpponents(gameState):
+                if self.distributions[opponent]:
+                    minGhostDist = min(self.getMazeDistance(myPostion, pos) for pos in self.distributions[opponent])
+            for pos, dist in deadEndDistances:
+                if myNextPos == pos:
+                    if dist * 2 < minGhostDist:
+                        self.escapeRoute = self.aStarSearch(gameState)
+                        action = self.escapeRoute.pop(0)
+                        # self.debugDraw(myNextPos,[1,0,0], True)
+                        return action
+
         # Might be better to let it learn during a game just don't save the new weights
         if self.numTraining > 0:
             self.observation(gameState)
