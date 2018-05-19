@@ -535,7 +535,7 @@ class ApproximateQAgent(DummyAgent):
                         # TODO rename to inKillZone
                         features['ghostDistance'] = 1
 
-                if not currentAgentState.isPacman and closestGhostDistance < 2:
+                if not currentAgentState.isPacman and closestGhostDistance < 4:
                     features['ghostDistance'] = 1
                 
 
