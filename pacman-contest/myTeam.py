@@ -269,7 +269,7 @@ class ApproximateQAgent(DummyAgent):
             self.weights = {'enemyPacManDistance': -300.5177004950197802, 'scoredPoints': 17.392823999999997,
                             'distanceToFood': 1.0827753607280046, 'foodICanReturn': -14.0866415843544661,
                             'ghostDistance': -100.19742345269455042, 'foodEaten': 6.2513475884878105, 'invaders': -300,
-                            'defenders': -300,
+                            'defenders': -300, 'estimatedEnemiYCord': 100.0437534,
                             'stop': -10}
 
         self.lastState = None
@@ -486,8 +486,8 @@ class ApproximateQAgent(DummyAgent):
 
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
-        # print features
-        # print self.weights
+        print features
+        print self.weights
 
         return Counter(self.weights) * Counter(features)
 
@@ -633,6 +633,42 @@ class ApproximateQAgent(DummyAgent):
         # First round initalising new game ignore feature space
         if util.manhattanDistance(currentAgentState.getPosition(), self.teamsInitialPosition[self.index]) == 0:
             return features
+
+
+        grid = state.getWalls()
+        halfway = grid.width / 2
+        borderPositions = [(halfway, y) for y in range(self.getFood(state).height) if
+                           not state.hasWall(halfway, y)]
+
+
+        if not currentAgentState.isPacman and features['numInvaders'] == 0:
+            borderPositions = [(halfway, y) for y in range(self.getFood(state).height) if
+                               not state.hasWall(halfway, y)]
+
+            if not self.red:
+                xrange = range(halfway)
+            else:
+                xrange = range(halfway, grid.width)
+
+        invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
+        if len(invaders) > 0:
+            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
+            features['invaderDistance'] = min(dists)
+
+        #NOTE: don't know about this feel free to delete if you want
+        elif self.distributions:
+            positions = [distribution.keys() for (enemie, distribution) in self.distributions.items()]
+            positions = positions[0] + positions[1]
+            positions = [(abs(position[0] - halfway), position[1]) for position in positions]
+            entryDict = defaultdict(float)
+            for (x, y) in positions:
+                entryDict[y] += 1.0 / x if x != 0 else 0.0
+            features['estimatedEnemiYCord'] = abs(
+                myPos[1] - max(entryDict.iteritems(), key=operator.itemgetter(1))[0]) / 100.0 * ( -1  * features['distanceToFood'] / 100.0)
+
+            print features['estimatedEnemiYCord']
+
+
 
         # TODO add distance to friendly if can see don't move towards it unless it can see a ghost
         # TODO add if we have 5 food return
@@ -849,24 +885,9 @@ class ApproximateQAgent(DummyAgent):
         # Like within 3 steps
         # If nothing else go find some food to eat
 
-        # If its empty probs are stuck .... run home
-        if not features:
-            grid = state.getWalls()
-            halfway = grid.width / 2
-            borderPositions = [(halfway, y) for y in range(self.getFood(state).height) if
-                               not state.hasWall(halfway, y)]
 
-            if not self.red:
-                xrange = range(halfway)
-            else:
-                xrange = range(halfway, grid.width)
 
-            for x in xrange:
-                for y in range(grid.height):
-                    if not grid[x][y]:
-                        borderDistances = min(
-                            self.getMazeDistance(myPos, borderPos) for borderPos in borderPositions)
-                        features['boarderDistance'] = (borderDistances / 100.0)
+
 
         # Keep hunting for food if we reach this point
         features['foodICanReturn'] = 0
