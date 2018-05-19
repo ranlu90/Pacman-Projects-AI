@@ -316,6 +316,8 @@ class ApproximateQAgent(DummyAgent):
         prevGameState = self.getPreviousObservation()
         if prevGameState and self.getFood(prevGameState)[int(myPos[0])][int(myPos[1])]:  # and myPos!= teamMatePosition:
             legal_actions.remove(Directions.STOP)
+        #if self.lastAction and self.lastAction == Directions.STOP:
+        #    legal_actions.remove(Directions.STOP)
 
         random.shuffle(legal_actions)
 
@@ -395,10 +397,11 @@ class ApproximateQAgent(DummyAgent):
             dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
             food = gameState.getAgentState(self.index).numCarrying
 
-            if min(dists) < 3 and food > 0:
+            if min(dists) < 4 and food > 0:
                 self.escapeRoute = self.aStarSearch(gameState)
                 action = self.escapeRoute.pop(0)
-                #print action
+
+                print action
                 return action
 
         if not self.teamsRegistered:
@@ -425,6 +428,7 @@ class ApproximateQAgent(DummyAgent):
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
         #print features
+        #print self.weights
 
         return Counter(self.weights) * Counter(features)
 
@@ -758,7 +762,7 @@ class ApproximateQAgent(DummyAgent):
             ghostCanKill = features['ghostDistance']
             features.clear()
             features['foodICanReturn'] = temp
-            features['ghostDistance'] = -1 
+            features['ghostDistance'] = ghostCanKill 
             return features
 
             # TODO add we died feature??
