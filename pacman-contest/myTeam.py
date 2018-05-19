@@ -962,21 +962,19 @@ class DefensiveAgent(DummyAgent):
         self.updateEnemyDistributions(gameState, True)
 
         actions = gameState.getLegalActions(self.index)
-        myState = gameState.getAgentState(self.index)
 
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
 
         if invaders:
-            if myState.scaredTimer < 2:
-                enemyY = invaders[0].getPosition()[1]
-                myY = myState.getPosition()[1]
-                if enemyY == myY:
-                    return Directions.STOP
-                elif enemyY < myY and Directions.SOUTH in actions:
-                    return Directions.SOUTH
-                elif enemyY > myY and Directions.NORTH in actions:
-                    return  Directions.NORTH
+            enemyY = invaders[0].getPosition()[1]
+            myY = gameState.getAgentState(self.index).getPosition()[1]
+            if enemyY == myY:
+                return Directions.STOP
+            elif enemyY < myY and Directions.SOUTH in actions:
+                return Directions.SOUTH
+            elif enemyY > myY and Directions.NORTH in actions:
+                return  Directions.NORTH
 
 
         # You can profile your evaluation time by uncommenting these lines
@@ -1049,14 +1047,14 @@ class DefensiveAgent(DummyAgent):
             for (x, y) in positions:
                 entryDict[y] += 1.0 / x if x != 0 else 0.0
             features['estimatedEntryPoint'] = abs(
-                myPos[1] - max(entryDict.iteritems(), key=operator.itemgetter(1))[0])
+                myPos[1] - max(entryDict.iteritems(), key=operator.itemgetter(1))[0]) / 100.0
 
         return features
 
     def getWeights(self, gameState, action):
 
         return {'numInvaders': -1000, 'onDefense': 20, 'invaderDistance': -10, 'stop': -10,
-                'defendFood': 1, 'reverse': -2, 'boarderDistance': -2}
+                'defendFood': 1, 'reverse': -2, 'boarderDistance': -70, 'estimatedEntryPoint': -150}
 
 
 class PriorityQueue:
