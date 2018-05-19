@@ -439,7 +439,7 @@ class ApproximateQAgent(DummyAgent):
                             if enemies:
                                 additional_cost = min([manhattanDistance(current, g) for g in goal]) + 50000
                             elif current in self.getFood(gameState).asList():
-                                additional_cost = min([manhattanDistance(current, g) for g in goal]) - 5
+                                additional_cost = min([manhattanDistance(current, g) for g in goal]) - 50
                             else:
                                 additional_cost = min([manhattanDistance(current, g) for g in goal])
                             new_cost = cost + state[2]
