@@ -463,7 +463,7 @@ class ApproximateQAgent(DummyAgent):
         if len(ghost) > 0:
             if ghost[0].scaredTimer < 2:
                 dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
-                if min(dists) < 4 and gameState.getAgentState(self.index).isPacman:
+                if min(dists) < 5 and gameState.getAgentState(self.index).isPacman:
                     escapeRoute = self.aStarSearch(gameState)
                     if escapeRoute:
                         return escapeRoute.pop(0)
