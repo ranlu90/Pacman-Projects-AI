@@ -968,7 +968,7 @@ class DefensiveAgent(DummyAgent):
 
         if invaders:
             enemyY = invaders[0].getPosition()[1]
-            myY = self.getPostition()[1]
+            myY = gameState.getAgentState(self.index).getPosition()[1]
             if enemyY == myY:
                 return Directions.STOP
             elif enemyY < myY and Directions.SOUTH in actions:
