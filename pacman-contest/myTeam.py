@@ -962,19 +962,21 @@ class DefensiveAgent(DummyAgent):
         self.updateEnemyDistributions(gameState, True)
 
         actions = gameState.getLegalActions(self.index)
+        myState = gameState.getAgentState(self.index)
 
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
 
         if invaders:
-            enemyY = invaders[0].getPosition()[1]
-            myY = gameState.getAgentState(self.index).getPosition()[1]
-            if enemyY == myY:
-                return Directions.STOP
-            elif enemyY < myY and Directions.SOUTH in actions:
-                return Directions.SOUTH
-            elif enemyY > myY and Directions.NORTH in actions:
-                return  Directions.NORTH
+            if myState.scaredTimer < 2:
+                enemyY = invaders[0].getPosition()[1]
+                myY = myState.getPosition()[1]
+                if enemyY == myY:
+                    return Directions.STOP
+                elif enemyY < myY and Directions.SOUTH in actions:
+                    return Directions.SOUTH
+                elif enemyY > myY and Directions.NORTH in actions:
+                    return  Directions.NORTH
 
 
         # You can profile your evaluation time by uncommenting these lines
