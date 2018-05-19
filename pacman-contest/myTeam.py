@@ -979,8 +979,6 @@ class DefensiveAgent(DummyAgent):
 
         agentDistances = gameState.getAgentDistances()
 
-        # TODO I think distances are in order index 0, 1, 2, 3
-
         myState = successor.getAgentState(self.index)
         myPos = myState.getPosition()
 
@@ -988,31 +986,6 @@ class DefensiveAgent(DummyAgent):
         halfway = grid.width / 2
 
         features['defendFood'] = len(self.getFoodYouAreDefending(successor).asList())
-
-        for distribution in self.distributions:
-            # find the closest pig on our side of the map
-            if distribution in self.getFoodYouAreDefending(successor):
-                features['attackInvaders'] = 100
-                break
-
-        # TODO this doesn't really work need to sort for the closest position and move that way.
-        # the that to need to move to that location would probs be best
-        # bestGuessLocation = dict()
-        # opponentIndex = []
-        # if self.distributions:
-        #    for (opponent, positions) in self.distributions.items():
-        #        opponentIndex = opponentIndex +  [opponent]
-        #        opponentAgentPosition = gameState.getAgentState(opponent).getPosition()
-        #        nosieEnemieLocations = [pos for pos, _ in self.distributions[opponent].items()]
-        #        nosieEnemieLocations.sort()    
-        #        features[opponent] =  self.getMazeDistance(myPos, nosieEnemieLocations[0])
-        #        #self.debugDraw(nosieEnemieLocation[0], [1,0,0], True)
-        # i = 0
-        # print opponentIndex
-        # for location in nosieEnemieLocations:
-        #    features[i] = self.getMazeDistance(myPos, bestGuessLocation[opponentIndex[i]])
-        #     i += 1
-        # print nosieEnemieLocations
 
         enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
@@ -1044,14 +1017,13 @@ class DefensiveAgent(DummyAgent):
                     if not grid[x][y]:
                         borderDistances = min(
                             self.getMazeDistance(myPos, borderPos) for borderPos in borderPositions)
-                        # print (-borderDistances * successor.getAgentState(self.index).numCarrying) / 100.0
                         features['boarderDistance'] = (borderDistances / 100.0)
 
         if len(invaders) > 0:
             dists = [self.getMazeDistance(myPos, a.getPosition()) for a in invaders]
             features['invaderDistance'] = min(dists)
-            features['boarderDistance'] = 0
 
+        #NOTE: don't know about this feel free to delete if you want
         elif self.distributions:
             positions = [distribution.keys() for (enemie, distribution) in self.distributions.items()]
             positions = positions[0] + positions[1]
@@ -1061,32 +1033,6 @@ class DefensiveAgent(DummyAgent):
                 entryDict[y] += 1.0 / x if x != 0 else 0.0
             features['estimatedEntryPoint'] = abs(
                 myPos[1] - max(entryDict.iteritems(), key=operator.itemgetter(1))[0])
-
-        # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        #
-        #        enemies = [successor.getAgentState(i) for i in self.getOpponents(successor)]
-        #        ghosts = [a for a in enemies if not a.isPacman and a.getPosition() != None]
-        #        enemyPacMan = [a for a in enemies if a.isPacman and a.getPosition() != None]
-        #
-        #
-        #        #TODO only try to kill the enemy ghost if it has 2 or less turns of being scared
-        #        #TODO Scared stuff doesnt seem to work
-        #        if len(ghosts) > 0:
-        #            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in ghosts]
-        #            scared = sum([ghost.scaredTimer for ghost in ghosts])/len(ghosts)
-        #
-        #            if min(dists) < 2 and scared > 2:
-        #                features['invaderDistance'] = -1 #* (min(dists) / 100.0)
-        #
-        #        if len(enemyPacMan) > 0:
-        #            dists = [self.getMazeDistance(myPos, a.getPosition()) for a in enemyPacMan]
-        #
-        #            #TODO might want to run untill not scared anymore
-        #            if min(dists) < 3 and gameState.getAgentState(self.index).scaredTimer > 2:
-        #                features['enemyPacManDistance'] = -1 #* (min(dists) / 100.0)
-        #        #!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-        # print features
 
         return features
 
