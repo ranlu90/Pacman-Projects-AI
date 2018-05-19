@@ -509,8 +509,6 @@ class ApproximateQAgent(DummyAgent):
 
     def getQValue(self, gameState, action):
         features = self.getFeatures(gameState, action)
-        print features
-        print self.weights
 
         return Counter(self.weights) * Counter(features)
 
@@ -689,7 +687,6 @@ class ApproximateQAgent(DummyAgent):
             features['estimatedEnemiYCord'] = abs(
                 myPos[1] - max(entryDict.iteritems(), key=operator.itemgetter(1))[0]) / 100.0 * ( -1  * features['distanceToFood'] / 100.0)
 
-            print features['estimatedEnemiYCord']
 
 
 
