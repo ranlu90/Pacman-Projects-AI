@@ -386,7 +386,7 @@ class ApproximateQAgent(DummyAgent):
         if wallPos[x][y - 1] and y >= 1:
             count += 1
         if count <= 1:
-            return pos
+            return prePos
 
         if not wallPos[x + 1][y] and x + 1 < wallPos.width and (x + 1, y) != prePos:
             return self.getNextPos((x + 1, y), pos)
