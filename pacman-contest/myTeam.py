@@ -266,7 +266,8 @@ class ApproximateQAgent(DummyAgent):
         if True:
             self.weights = {'enemyPacManDistance': -300.5177004950197802, 'scoredPoints': 17.392823999999997,
                             'distanceToFood': 1.0827753607280046, 'foodICanReturn': -14.0866415843544661,
-                            'ghostDistance': -100.19742345269455042, 'foodEaten': 6.2513475884878105, 'invaders': -300, 'defenders': -300}
+                            'ghostDistance': -100.19742345269455042, 'foodEaten': 6.2513475884878105, 'invaders': -300, 'defenders': -300,
+                            'stop': -10}
 
         self.lastState = None
         self.lastAction = None
@@ -650,7 +651,7 @@ class ApproximateQAgent(DummyAgent):
                 features['enemyPacManDistance'] = -1  # * (min(dists) / 100.0)
         # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-        # if action == Directions.STOP: features['stop'] = 1
+        if action == Directions.STOP: features['stop'] = 1 
         # rev = Directions.REVERSE[state.getAgentState(self.index).configuration.direction]
         # if action == rev: features['reverse'] = 1
 
@@ -752,14 +753,12 @@ class ApproximateQAgent(DummyAgent):
 
         elif closestGhostDistance < 4  and not scaredEnemyGhost or (
                 successorAgentState.numCarrying > 5 and features['distanceToFood'] < -0.03) or foodLeft < 3:
-            print "test"
 
             temp = features['foodICanReturn']
             ghostCanKill = features['ghostDistance']
             features.clear()
             features['foodICanReturn'] = temp
             features['ghostDistance'] = -1 
-            print features 
             return features
 
             # TODO add we died feature??
@@ -812,8 +811,6 @@ class ApproximateQAgent(DummyAgent):
         # Keep hunting for food if we reach this point
         features['foodICanReturn'] = 0
 
-        if features['enemyPacManDistance']:
-            print "what"
         
         defenders = [a for a in enemies if not a.isPacman and a.getPosition() != None]
         features['defenders'] = len(defenders)
@@ -829,7 +826,6 @@ class ApproximateQAgent(DummyAgent):
                                                                                                          action)
         self.weights = {k: self.weights.get(k, 0) + self.alpha * difference * features.get(k, 0) for k in
                         set(self.weights) | set(features)}
-        # print self.weights
 
     def observeTransition(self, state, action, nextState, deltaReward):
 
