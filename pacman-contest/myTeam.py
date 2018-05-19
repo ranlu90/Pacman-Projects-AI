@@ -989,7 +989,8 @@ class DefensiveAgent(DummyAgent):
         invaders = [a for a in enemies if a.isPacman and a.getPosition() != None]
 
         if invaders:
-            if myState.scaredTimer < 2:
+            dist = self.getMazeDistance(invaders[0].getPosition(), myState.getPosition())
+            if myState.scaredTimer < 2 and dist < 3:
                 enemyY = invaders[0].getPosition()[1]
                 myY = myState.getPosition()[1]
                 if enemyY == myY:
@@ -997,7 +998,7 @@ class DefensiveAgent(DummyAgent):
                 elif enemyY < myY and Directions.SOUTH in actions:
                     return Directions.SOUTH
                 elif enemyY > myY and Directions.NORTH in actions:
-                    return  Directions.NORTH
+                    return Directions.NORTH
 
 
         # You can profile your evaluation time by uncommenting these lines
