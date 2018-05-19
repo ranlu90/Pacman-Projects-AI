@@ -396,12 +396,16 @@ class ApproximateQAgent(DummyAgent):
         if not wallPos[x][y - 1] and y >= 1 and (x, y - 1) != prePos:
             return self.getNextPos((x, y - 1), pos)
 
-    def getEntrance(self):
-        newList = list()
+    # Return a list of each entrance to each dead end with the distance to it
+    def getDeadEndDistance(self):
+        distanceList = list()
         for pos in self.getAllDeadEnd():
             entrance = self.getNextPos(pos, None)
-            newList.append(entrance)
-        return newList
+            distance = self.getMazeDistance(entrance, pos)
+            node = entrance, distance
+            if distance > 0:
+                distanceList.append(node)
+        return distanceList
 
     # find the path to the closet border if we are close to ghost and have food in carriage
     def aStarSearch(self, gameState):
