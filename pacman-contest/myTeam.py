@@ -440,6 +440,7 @@ class ApproximateQAgent(DummyAgent):
                         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
                         ghosts = [a.getPosition() for a in enemies if not a.isPacman and a.getPosition() != None]
                         nogo = [(position + action for (k, action) in Actions._directions) for position in ghosts]
+                        nogo += ghosts
                         if not state in visited:
                             if current in nogo:
                                 continue
