@@ -371,6 +371,39 @@ class ApproximateQAgent(DummyAgent):
                 allDeadEnd.append(pos)
         return allDeadEnd
 
+    # Recursively get the next valid position until reach the entrance to dead end
+    def getNextPos(self, pos, prePos):
+        observation = self.getCurrentObservation()
+        wallPos = observation.getWalls()
+        (x, y) = pos
+        count = 0
+        if wallPos[x + 1][y] and x + 1 < wallPos.width:
+            count += 1
+        if wallPos[x - 1][y] and x >= 1:
+            count += 1
+        if wallPos[x][y + 1] and y + 1 < wallPos.height:
+            count += 1
+        if wallPos[x][y - 1] and y >= 1:
+            count += 1
+        if count <= 1:
+            return pos
+
+        if not wallPos[x + 1][y] and x + 1 < wallPos.width and (x + 1, y) != prePos:
+            return self.getNextPos((x + 1, y), pos)
+        if not wallPos[x - 1][y] and x >= 1 and (x - 1, y) != prePos:
+            return self.getNextPos((x - 1, y), pos)
+        if not wallPos[x][y + 1] and y + 1 < wallPos.height and (x, y + 1) != prePos:
+            return self.getNextPos((x, y + 1), pos)
+        if not wallPos[x][y - 1] and y >= 1 and (x, y - 1) != prePos:
+            return self.getNextPos((x, y - 1), pos)
+
+    def getEntrance(self):
+        newList = list()
+        for pos in self.getAllDeadEnd():
+            entrance = self.getNextPos(pos, None)
+            newList.append(entrance)
+        return newList
+
     # find the path to the closet border if we are close to ghost and have food in carriage
     def aStarSearch(self, gameState):
         visited = list()
@@ -416,6 +449,7 @@ class ApproximateQAgent(DummyAgent):
         return path
 
     def chooseAction(self, gameState):
+
         myPostion = gameState.getAgentPosition(self.index)
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
