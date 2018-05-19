@@ -345,6 +345,32 @@ class ApproximateQAgent(DummyAgent):
 
         return random.choice(legalActions) if random_action else action
 
+    # Find all dead end in the maze
+    def getAllDeadEnd(self):
+        observation = self.getCurrentObservation()
+        validPosition = list()
+        wallPos = observation.getWalls()
+        for x in range(wallPos.width):
+            for y in range(wallPos.height):
+                if not wallPos[x][y]:
+                    validPosition.append((x, y))
+
+        allDeadEnd = list()
+        for pos in validPosition:
+            (x, y) = pos
+            count = 0
+            if wallPos[x + 1][y] and x + 1 < wallPos.width:
+                count += 1
+            if wallPos[x - 1][y] and x >= 1:
+                count += 1
+            if wallPos[x][y + 1] and y + 1 < wallPos.height:
+                count += 1
+            if wallPos[x][y - 1] and y >= 1:
+                count += 1
+            if count >= 3:
+                allDeadEnd.append(pos)
+        return allDeadEnd
+
     # find the path to the closet border if we are close to ghost and have food in carriage
     def aStarSearch(self, gameState):
         visited = list()
