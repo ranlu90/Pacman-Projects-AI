@@ -455,12 +455,13 @@ class ApproximateQAgent(DummyAgent):
         enemies = [gameState.getAgentState(i) for i in self.getOpponents(gameState)]
         ghost = [a for a in enemies if not a.isPacman and a.getPosition() != None]
         if len(ghost) > 0:
-            dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
-            if min(dists) < 4 and gameState.getAgentState(self.index).isPacman:
-                self.escapeRoute = self.aStarSearch(gameState)
-                action = self.escapeRoute.pop(0)
-                # print action
-                return action
+            if ghost[0].scaredTimer < 2:
+                dists = [self.getMazeDistance(myPostion, a.getPosition()) for a in ghost]
+                if min(dists) < 4 and gameState.getAgentState(self.index).isPacman:
+                    self.escapeRoute = self.aStarSearch(gameState)
+                    action = self.escapeRoute.pop(0)
+                    # print action
+                    return action
 
         if not self.teamsRegistered:
             self.setInitialDistributions(gameState)
