@@ -1,4 +1,4 @@
-# RMIT COSC1125/1127 Artificial Inteligence - Pacman Project Templates
+# RMIT COSC1125/1127 Artificial Inteligence - Pacman Projects
 
 ## Team "# TODO : Win!"
 
